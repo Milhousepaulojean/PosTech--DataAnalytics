@@ -1,0 +1,120 @@
+name: Validate
+
+# Validações rápidas disparadas em Pull Requests para Development e main.
+# Usa apenas pull_request (não pull_request_target) para não expor secrets
+# em PRs provenientes de forks.
+
+on:
+  pull_request:
+    branches:
+      - main
+      - Development
+
+# Cancela execuções antigas do mesmo branch/PR ao receber novo push.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Permissões mínimas — somente leitura do código.
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # JOB 1: Lint e formatação (rápido — ~1-2 min)
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dev dependencies
+        run: pip install --quiet -r requirements-dev.txt
+
+      # Ruff verifica .py e .ipynb (configurado em pyproject.toml via extend-include)
+      - name: Ruff — lint Python + notebooks
+        run: ruff check . --output-format=github
+
+      # Black verifica formatação de .py e .ipynb (black[jupyter] instalado)
+      - name: Black — check formatting
+        run: black --check --diff .
+
+  # ---------------------------------------------------------------------------
+  # JOB 2: Validação estrutural dos notebooks (rápido — ~30 seg)
+  # ---------------------------------------------------------------------------
+  notebook-structure:
+    name: Validate Notebooks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dev dependencies
+        run: pip install --quiet -r requirements-dev.txt
+
+      # Valida JSON, nbformat >= 4 e presença de kernelspec em todos os notebooks.
+      - name: Validate notebook structure and metadata
+        run: |
+          python - <<'PYEOF'
+          import json, sys, pathlib
+
+          notebooks = sorted(
+              p for p in pathlib.Path(".").rglob("*.ipynb")
+              if ".ipynb_checkpoints" not in str(p)
+              and "build/" not in str(p)
+          )
+
+          if not notebooks:
+              print("No notebooks found — nothing to validate.")
+              sys.exit(0)
+
+          errors = []
+          warnings = []
+
+          for nb in notebooks:
+              try:
+                  with open(nb, encoding="utf-8") as f:
+                      data = json.load(f)
+                  fmt = data.get("nbformat", 0)
+                  if fmt < 4:
+                      errors.append(
+                          f"::error file={nb}::[nbformat] {fmt} < 4 — "
+                          "upgrade notebook with: jupyter nbconvert --to notebook --nbformat 4"
+                      )
+                  kernelspec = data.get("metadata", {}).get("kernelspec", {})
+                  if not kernelspec:
+                      warnings.append(
+                          f"::warning file={nb}::[kernelspec] No kernel metadata — "
+                          "open and save the notebook in Jupyter to fix"
+                      )
+              except json.JSONDecodeError as e:
+                  errors.append(f"::error file={nb}::[json] Invalid JSON — {e}")
+
+          for msg in warnings:
+              print(msg)
+
+          if errors:
+              for err in errors:
+                  print(err)
+              sys.exit(1)
+
+          print(f"✓ {len(notebooks)} notebook(s) validated successfully.")
+          PYEOF

@@ -1,0 +1,19 @@
+# Dependências de desenvolvimento e CI
+# Inclui todas as dependências de runtime via -r requirements.txt
+# Instale com: pip install -r requirements-dev.txt
+
+-r requirements.txt
+
+# --- Linting e formatação ---
+ruff>=0.4.0
+black[jupyter]>=24.0.0   # black[jupyter] habilita verificação de notebooks .ipynb
+
+# --- Testes ---
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# --- Validação e execução de notebooks ---
+papermill>=2.4.0          # executa notebooks preservando os originais
+nbconvert>=7.16.0         # conversão e execução de notebooks
+nbstripout>=0.7.0         # remove outputs antes de commitar (use: nbstripout --install)
+nbqa>=1.8.0               # executa ferramentas de qualidade em notebooks via CLI local

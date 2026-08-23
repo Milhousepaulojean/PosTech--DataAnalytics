@@ -1,0 +1,63 @@
+# Configuração de ferramentas do projeto PosTech — Data Analytics
+# Usado por ruff, black, pytest e coverage.
+
+# =============================================================================
+# Ruff — linter rápido (substitui flake8 + isort)
+# =============================================================================
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+# Inclui notebooks .ipynb na verificação automática
+extend-include = ["*.ipynb"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle — erros de estilo
+    "W",   # pycodestyle — avisos
+    "F",   # pyflakes — erros de lógica (imports não usados, vars não definidas)
+    "I",   # isort — ordenação de imports
+    "B",   # flake8-bugbear — padrões problemáticos
+    "UP",  # pyupgrade — usa sintaxe Python moderna
+]
+ignore = [
+    "E501",  # line too long — gerenciado pelo black
+    "B008",  # function call in default argument — padrão comum em data science
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Notebooks: imports no meio do código e imports "não usados" são comuns
+"*.ipynb" = ["E402", "F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = []
+
+# =============================================================================
+# Black — formatador de código
+# =============================================================================
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+# =============================================================================
+# Pytest — runner de testes
+# =============================================================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--tb=short"
+
+# =============================================================================
+# Coverage — relatório de cobertura de testes
+# =============================================================================
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    ".venv/*",
+    "venv/*",
+    "build/*",
+    "**/.ipynb_checkpoints/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
