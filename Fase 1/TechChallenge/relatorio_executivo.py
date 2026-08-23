@@ -723,7 +723,424 @@ grafico_retorno = salvar_grafico("retorno_por_satisfacao.png")
 
 # %% [markdown]
 # ---
-# ## 13. Relatório executivo em HTML
+# ## 13. Gargalo logístico: vendedor vs. transportadora
+#
+# Compara o tempo médio de cada etapa da cadeia logística em pedidos atrasados.
+# Etapa 1: da compra até a postagem na transportadora (responsabilidade do vendedor).
+# Etapa 2: da postagem até a entrega ao cliente (responsabilidade da transportadora).
+
+# %%
+df_entregues["tempo_postagem"] = (
+    df_entregues["order_delivered_carrier_date"]
+    - df_entregues["order_purchase_timestamp"]
+).dt.days
+
+df_entregues["tempo_transporte_etapa"] = (
+    df_entregues["order_delivered_customer_date"]
+    - df_entregues["order_delivered_carrier_date"]
+).dt.days
+
+df_gargalo = df_entregues[df_entregues["foi_atraso"]].dropna(
+    subset=["tempo_postagem", "tempo_transporte_etapa"]
+)
+
+tempo_medio_postagem = df_gargalo["tempo_postagem"].mean()
+tempo_medio_transporte = df_gargalo["tempo_transporte_etapa"].mean()
+
+dados_gargalo = pd.DataFrame(
+    {
+        "Etapa": [
+            "Vendedor\n(da compra à postagem)",
+            "Transportadora\n(da postagem à entrega)",
+        ],
+        "Média de dias": [tempo_medio_postagem, tempo_medio_transporte],
+    }
+)
+
+plt.figure(figsize=(9, 6))
+ax = sns.barplot(
+    data=dados_gargalo,
+    x="Etapa",
+    y="Média de dias",
+    hue="Etapa",
+    palette=["#FFD700", "#D90429"],
+    legend=False,
+)
+
+ax.set_title(
+    "Gargalo logístico: onde o tempo é maior?\n(apenas pedidos atrasados)",
+    fontsize=15,
+    fontweight="bold",
+)
+ax.set_ylabel("Média de dias (pedidos atrasados)")
+ax.set_xlabel("")
+
+anotar_barras(ax, "{:.1f}")
+grafico_gargalo = salvar_grafico("gargalo_logistico.png")
+
+
+# %% [markdown]
+# ---
+# ## 14. Sazonalidade da receita em risco com destaque para Black Friday
+#
+# A mesma série mensal calculada na seção 11, agora com destaque visual
+# para o período de pico sazonal (nov/2017 a fev/2018).
+# O pico não pode ser atribuído diretamente a esses eventos sem comparação
+# com volumes equivalentes em anos anteriores e controle da taxa de atraso.
+
+# %%
+plt.figure(figsize=(14, 6))
+ax = sns.lineplot(
+    data=risco_mensal,
+    x="mes_compra",
+    y="receita_em_risco",
+    marker="o",
+    color="#D90429",
+    linewidth=2.5,
+)
+
+ax.set_title(
+    "Sazonalidade da receita em risco (pico sazonal destacado)",
+    fontsize=15,
+    fontweight="bold",
+)
+ax.set_xlabel("Mês da compra")
+ax.set_ylabel("Receita associada ao risco (R$)")
+plt.xticks(rotation=45)
+
+meses_risco = risco_mensal["mes_compra"].tolist()
+if "2017-11" in meses_risco and "2018-02" in meses_risco:
+    x_ini = meses_risco.index("2017-11") - 0.5
+    x_fim = meses_risco.index("2018-02") + 0.5
+    ax.axvspan(
+        x_ini,
+        x_fim,
+        color="red",
+        alpha=0.10,
+        label="Pico sazonal (nov/2017–fev/2018)",
+    )
+    ax.legend(loc="upper left")
+
+grafico_sazonalidade = salvar_grafico("sazonalidade_risco.png")
+
+
+# %% [markdown]
+# ---
+# ## 15. Impacto da distância no desempenho logístico
+#
+# Calcula a distância entre o CEP do vendedor e o CEP do cliente usando a
+# fórmula de Haversine, com coordenadas médias por prefixo de CEP.
+# A análise preserva granularidade de um pedido por linha (order_id único),
+# selecionando o primeiro seller_id registrado nos itens de cada pedido.
+# Os pedidos são agrupados em faixas de distância para avaliar se a
+# quilometragem explica a taxa de atraso e o tempo de transporte.
+
+# %%
+geo = carregar_csv("olist_geolocation_dataset.csv")
+geo_reduzido = (
+    geo.groupby("geolocation_zip_code_prefix")[["geolocation_lat", "geolocation_lng"]]
+    .mean()
+    .reset_index()
+)
+
+# Um vendedor por pedido: primeiro seller_id listado nos itens do pedido
+seller_por_pedido = items.groupby("order_id")["seller_id"].first().reset_index()
+
+df_distancia = (
+    df_entregues[
+        [
+            "order_id",
+            "customer_zip_code_prefix",
+            "foi_atraso",
+            "dias_atraso",
+            "tempo_transporte_etapa",
+        ]
+    ]
+    .merge(seller_por_pedido, on="order_id", how="left")
+    .merge(
+        sellers[["seller_id", "seller_zip_code_prefix"]],
+        on="seller_id",
+        how="left",
+    )
+    .merge(
+        geo_reduzido.rename(
+            columns={
+                "geolocation_zip_code_prefix": "customer_zip_code_prefix",
+                "geolocation_lat": "lat_cust",
+                "geolocation_lng": "lng_cust",
+            }
+        ),
+        on="customer_zip_code_prefix",
+        how="left",
+    )
+    .merge(
+        geo_reduzido.rename(
+            columns={
+                "geolocation_zip_code_prefix": "seller_zip_code_prefix",
+                "geolocation_lat": "lat_seller",
+                "geolocation_lng": "lng_seller",
+            }
+        ),
+        on="seller_zip_code_prefix",
+        how="left",
+    )
+    .dropna(subset=["lat_cust", "lng_cust", "lat_seller", "lng_seller"])
+)
+
+pedidos_excluidos_distancia = len(df_entregues) - len(df_distancia)
+print(
+    "Pedidos excluídos da análise de distância "
+    f"(sem correspondência na geolocalização): {pedidos_excluidos_distancia:,}"
+)
+
+
+def haversine(lat1, lon1, lat2, lon2):
+    """Distância em km entre dois pontos geográficos (fórmula de Haversine)."""
+    r = 6371
+    phi1, phi2 = np.radians(lat1), np.radians(lat2)
+    delta_phi = np.radians(lat2 - lat1)
+    delta_lambda = np.radians(lon2 - lon1)
+    a = (
+        np.sin(delta_phi / 2) ** 2
+        + np.cos(phi1) * np.cos(phi2) * np.sin(delta_lambda / 2) ** 2
+    )
+    return r * 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+
+
+df_distancia["distancia_km"] = haversine(
+    df_distancia["lat_cust"],
+    df_distancia["lng_cust"],
+    df_distancia["lat_seller"],
+    df_distancia["lng_seller"],
+)
+
+correlacao_distancia = df_distancia["distancia_km"].corr(df_distancia["dias_atraso"])
+
+max_dist = df_distancia["distancia_km"].max()
+bins_dist = [0, 250, 500, 1000, 2000, max(max_dist + 1, 2001)]
+labels_dist = [
+    "Até 250km",
+    "250–500km",
+    "500–1000km",
+    "1000–2000km",
+    "Acima 2000km",
+]
+
+df_distancia["faixa_distancia"] = pd.cut(
+    df_distancia["distancia_km"],
+    bins=bins_dist,
+    labels=labels_dist,
+    right=True,
+    include_lowest=True,
+)
+
+analise_distancia = (
+    df_distancia.groupby("faixa_distancia", observed=False)
+    .agg(
+        taxa_atraso=("foi_atraso", "mean"),
+        tempo_transporte_medio=("tempo_transporte_etapa", "mean"),
+        pedidos=("order_id", "nunique"),
+    )
+    .reset_index()
+)
+analise_distancia["taxa_atraso_pct"] = analise_distancia["taxa_atraso"] * 100
+
+fig_dist, ax1_dist = plt.subplots(figsize=(14, 7))
+
+barras_dist = sns.barplot(
+    data=analise_distancia,
+    x="faixa_distancia",
+    y="tempo_transporte_medio",
+    ax=ax1_dist,
+    hue="faixa_distancia",
+    palette="Blues_d",
+    alpha=0.8,
+    legend=False,
+)
+ax1_dist.set_ylabel(
+    "Tempo médio de transporte (dias)",
+    fontsize=11,
+    fontweight="bold",
+    color="navy",
+)
+ax1_dist.set_xlabel("Faixa de distância entre vendedor e comprador", fontsize=11)
+
+ax2_dist = ax1_dist.twinx()
+sns.lineplot(
+    data=analise_distancia,
+    x="faixa_distancia",
+    y="taxa_atraso_pct",
+    ax=ax2_dist,
+    marker="o",
+    color="#D90429",
+    linewidth=2.5,
+    label="Taxa de atraso (%)",
+)
+ax2_dist.set_ylabel(
+    "Taxa de atraso (%)", fontsize=11, fontweight="bold", color="#D90429"
+)
+ax2_dist.grid(False)
+ax2_dist.legend(loc="upper left")
+
+for p in barras_dist.patches:
+    h = p.get_height()
+    if pd.notna(h) and h > 0:
+        ax1_dist.annotate(
+            f"{h:.1f} d",
+            (p.get_x() + p.get_width() / 2, h),
+            ha="center",
+            va="bottom",
+            xytext=(0, 5),
+            textcoords="offset points",
+            fontsize=9,
+            fontweight="bold",
+        )
+
+ax1_dist.set_title(
+    "Distância vs. desempenho logístico: tempo de transporte e taxa de atraso",
+    fontsize=14,
+    fontweight="bold",
+    pad=20,
+)
+
+plt.tight_layout()
+grafico_distancia = salvar_grafico("distancia_desempenho.png")
+
+
+# %% [markdown]
+# ---
+# ## 16. Peso do produto e frete vs. atraso
+#
+# Scatterplots com correlação calculada dinamicamente via df.corr().
+# Correlação próxima de zero indica ausência de relação linear relevante
+# entre as variáveis e o atraso observado.
+
+# %%
+df_itens_produto = items.merge(
+    products[["product_id", "product_weight_g"]], on="product_id", how="left"
+)
+
+# Agrega por pedido: peso médio e frete total (preserva granularidade de pedido)
+item_por_pedido = df_itens_produto.groupby("order_id", as_index=False).agg(
+    freight_value_total=("freight_value", "sum"),
+    product_weight_g_medio=("product_weight_g", "mean"),
+)
+
+df_scatter = (
+    df_entregues[df_entregues["foi_atraso"]][["order_id", "dias_atraso"]]
+    .merge(item_por_pedido, on="order_id", how="left")
+    .dropna(subset=["product_weight_g_medio", "freight_value_total"])
+)
+
+pedidos_scatter = len(df_scatter)
+corr_peso = df_scatter["product_weight_g_medio"].corr(df_scatter["dias_atraso"])
+corr_frete = df_scatter["freight_value_total"].corr(df_scatter["dias_atraso"])
+
+print(f"Pedidos com peso e frete disponíveis: {pedidos_scatter:,}")
+print(f"Correlação peso médio vs. atraso: {corr_peso:.2f}")
+print(f"Correlação frete total vs. atraso: {corr_frete:.2f}")
+
+fig_scatter, (ax_peso, ax_frete) = plt.subplots(1, 2, figsize=(14, 6))
+
+sns.scatterplot(
+    data=df_scatter,
+    x="product_weight_g_medio",
+    y="dias_atraso",
+    alpha=0.3,
+    color="gray",
+    ax=ax_peso,
+)
+ax_peso.set_title(
+    f"Peso médio vs. atraso\n(Correlação: {corr_peso:.2f} — quase nula)",
+    fontsize=11,
+    fontweight="bold",
+)
+ax_peso.set_xlabel("Peso médio do produto (g)")
+ax_peso.set_ylabel("Dias de atraso")
+
+sns.scatterplot(
+    data=df_scatter,
+    x="freight_value_total",
+    y="dias_atraso",
+    alpha=0.3,
+    color="gray",
+    ax=ax_frete,
+)
+ax_frete.set_title(
+    f"Frete total vs. atraso\n(Correlação: {corr_frete:.2f} — quase nula)",
+    fontsize=11,
+    fontweight="bold",
+)
+ax_frete.set_xlabel("Valor total do frete (R$)")
+ax_frete.set_ylabel("Dias de atraso")
+
+plt.suptitle(
+    "Relação entre características da carga e atraso nas entregas",
+    fontsize=14,
+    fontweight="bold",
+    y=1.02,
+)
+plt.tight_layout()
+grafico_peso_frete = salvar_grafico("peso_frete_atraso.png")
+
+
+# %% [markdown]
+# ---
+# ## 17. Distribuição mensal de avaliações
+#
+# Gráfico de barras empilhadas com distribuição percentual de review_score
+# por mês, usando pd.crosstab com normalize="index".
+# Permite observar a evolução da qualidade percebida ao longo do tempo.
+
+# %%
+df_com_nota = df_pedidos.dropna(subset=["review_score", "mes_compra"])
+
+dist_percentual = (
+    pd.crosstab(
+        df_com_nota["mes_compra"], df_com_nota["review_score"], normalize="index"
+    )
+    * 100
+)
+
+plt.figure(figsize=(18, 8))
+sns.set_theme(style="white")
+
+cores_notas = ["#D90429", "#F48C06", "#FFBA08", "#80B918", "#2D6A4F"]
+
+dist_percentual.plot(
+    kind="bar",
+    stacked=True,
+    color=cores_notas[: dist_percentual.shape[1]],
+    ax=plt.gca(),
+    width=0.85,
+    alpha=0.9,
+)
+
+plt.title(
+    "Distribuição mensal de avaliações (2016–2018)",
+    fontsize=16,
+    fontweight="bold",
+    pad=20,
+)
+plt.xlabel("Mês da operação", fontsize=12)
+plt.ylabel("Percentual das avaliações (%)", fontsize=12)
+plt.legend(
+    title="Review Score",
+    bbox_to_anchor=(1.01, 1),
+    loc="upper left",
+    frameon=False,
+)
+plt.xticks(rotation=45, ha="right")
+plt.ylim(0, 100)
+sns.despine()
+
+plt.tight_layout()
+grafico_dist_mensal = salvar_grafico("distribuicao_mensal_avaliacoes.png")
+
+
+# %% [markdown]
+# ---
+# ## 18. Relatório executivo em HTML
 #
 # O HTML utiliza uma estrutura visual inspirada nas recomendações de
 # apresentação acadêmica:
@@ -1163,43 +1580,151 @@ Tabela 1 — Estados com maior receita associada ao risco.
 Fonte: elaboração própria com base nos dados da Olist.
 </p>
 
-<h3>3.4 Perfil do cliente</h3>
+<h3>3.4 Gargalo logístico: vendedor versus transportadora</h3>
 
 <p>
-A segmentação entre novo cliente e cliente recorrente foi construída com base
-na quantidade de pedidos observados por <code>customer_unique_id</code>.
-Clientes com mais de um pedido foram classificados como recorrentes.
+A cadeia logística foi dividida em duas etapas: o intervalo entre a data da
+compra e a postagem na transportadora (etapa do vendedor) e o intervalo entre
+a postagem e a entrega ao cliente (etapa da transportadora). A análise
+considerou apenas pedidos com atraso.
 </p>
 
 <p>
-Essa classificação não equivale a uma segmentação completa de clientes VIP,
-pois não considera margem, frequência mensal, ticket médio, tempo entre
-compras ou valor de vida do cliente.
+O tempo médio na etapa do vendedor foi de
+<strong>{tempo_medio_postagem:.1f} dia(s)</strong>, enquanto o tempo médio
+na etapa da transportadora foi de
+<strong>{tempo_medio_transporte:.1f} dia(s)</strong>. Esses valores são
+descritivos e representam médias simples sem controle por tipo de produto,
+região ou período.
 </p>
 
-{figura_html(grafico_perfil, 3, "Receita associada ao risco por perfil de cliente")}
+<div class="nota-metodologica">
+<strong>Nota metodológica:</strong>
+a separação em duas etapas depende da disponibilidade de
+<code>order_delivered_carrier_date</code>. Pedidos sem essa data foram
+excluídos desta análise. A comparação não indica responsabilidade causal
+de nenhum agente; ela identifica onde o tempo está associado a maior duração
+na média observada.
+</div>
 
-<h3>3.5 Evolução mensal</h3>
+{figura_html(grafico_gargalo, 3, "Gargalo logístico: tempo médio por etapa em pedidos atrasados")}
+
+<h3>3.5 Sazonalidade da receita em risco</h3>
 
 <p>
-A evolução mensal permite observar períodos de maior concentração da receita
-associada ao risco. Porém, um pico mensal não deve ser atribuído diretamente à
-Black Friday, ao Natal ou a outro evento sem uma comparação formal com volume
-de pedidos, taxa de atraso e períodos equivalentes.
+A evolução mensal da receita associada ao risco indica períodos de maior
+concentração. O destaque para novembro de 2017 a fevereiro de 2018 coincide
+com a Black Friday de 2017 e com as festas de fim de ano.
 </p>
 
-{figura_html(grafico_mensal, 4, "Evolução mensal da receita associada ao risco")}
+<p>
+A concentração de risco nesse período pode estar associada ao aumento do
+volume de pedidos, a limitações de capacidade logística em períodos de pico,
+ou a ambos os fatores. A atribuição causal exige comparação com o mesmo
+período em anos anteriores e controle do volume total de pedidos por mês.
+</p>
 
-<h3>3.6 Retenção exploratória</h3>
+<div class="nota-metodologica">
+<strong>Nota metodológica:</strong>
+o pico sazonal não pode ser interpretado como evidência direta de que a
+Black Friday ou o Natal causaram os atrasos. A sobreposição temporal é
+indicativa, não conclusiva.
+</div>
+
+{figura_html(grafico_sazonalidade, 4, "Sazonalidade da receita em risco com destaque para pico sazonal")}
+
+<h3>3.6 Relação entre peso do produto, frete e atraso</h3>
+
+<p>
+A correlação entre o peso médio do produto e os dias de atraso foi de
+<strong>{corr_peso:.2f}</strong>. A correlação entre o valor do frete e os
+dias de atraso foi de <strong>{corr_frete:.2f}</strong>. Ambas as correlações
+são classificadas como quase nulas, indicando que não foi observada relação
+linear relevante entre essas variáveis e o atraso na base analisada.
+</p>
+
+<p>
+Esse resultado sugere que o atraso não está associado a características físicas
+da carga nem ao custo de frete. Esse padrão é consistente com um problema
+sistêmico na capacidade operacional da malha de distribuição.
+</p>
+
+{figura_html(grafico_peso_frete, 5, "Peso médio e frete total versus dias de atraso (pedidos atrasados)")}
+
+<h3>3.7 Impacto da distância no desempenho logístico</h3>
+
+<p>
+A distância entre vendedor e comprador foi estimada pela fórmula de Haversine,
+usando as coordenadas médias por prefixo de CEP. A análise preservou a
+granularidade de um pedido por linha, selecionando o primeiro vendedor listado
+nos itens de cada pedido. Os pedidos foram agrupados em cinco faixas de
+distância para comparar o tempo médio de transporte e a taxa de atraso.
+</p>
+
+<p>
+A correlação entre distância e dias de atraso foi de
+<strong>{correlacao_distancia:.2f}</strong>, classificada como quase nula.
+Esse resultado sugere que a quilometragem percorrida não está associada de
+forma linear ao atraso observado na base. O padrão é consistente com um
+problema logístico sistêmico, não fundamentalmente geográfico.
+</p>
+
+<div class="nota-metodologica">
+<strong>Nota metodológica:</strong>
+a distância foi calculada em linha reta a partir do centroide do prefixo de CEP,
+o que não corresponde à distância real percorrida pelo transportador.
+<strong>{pedidos_excluidos_distancia:,}</strong> pedido(s) foram excluídos
+desta análise por não possuírem correspondência na tabela de geolocalização.
+</div>
+
+{figura_html(grafico_distancia, 6, "Distância vs. desempenho logístico: tempo de transporte e taxa de atraso por faixa")}
+
+<h3>3.8 Distribuição mensal de avaliações</h3>
+
+<p>
+O gráfico de barras empilhadas apresenta a distribuição percentual das
+avaliações por mês, permitindo visualizar a evolução da proporção de notas
+boas e ruins ao longo do período analisado. Cada barra soma 100%,
+representando a composição das avaliações de cada mês.
+</p>
+
+<p>
+A variação observada mês a mês reflete tanto mudanças na experiência do
+cliente quanto o volume reduzido de pedidos no início da operação, que pode
+tornar os percentuais mensais menos estáveis.
+</p>
+
+{figura_html(grafico_dist_mensal, 7, "Distribuição mensal percentual de avaliações (2016–2018)")}
+
+<h3>3.9 Perfil do cliente observado</h3>
+
+<p>
+A segmentação entre novo cliente e cliente recorrente observado foi construída
+com base na quantidade de pedidos por <code>customer_unique_id</code>.
+Clientes com mais de um pedido foram classificados como recorrentes observados.
+</p>
+
+<p>
+Essa classificação não equivale a uma segmentação por fidelização comprovada,
+pois não considera margem, frequência mensal, ticket médio, tempo entre compras
+ou valor de vida do cliente. A classificação não controla a janela temporal:
+clientes que realizaram a primeira compra próxima ao fim do período analisado
+tiveram menos oportunidade de realizar uma segunda compra.
+</p>
+
+{figura_html(grafico_perfil, 8, "Receita associada ao risco por perfil de cliente observado")}
+
+<h3>3.10 Retenção exploratória após a primeira experiência</h3>
 
 <p>
 A recompra foi aproximada pela existência de mais de um pedido para o mesmo
-cliente único na base histórica. Essa medida é exploratória, pois não controla
+cliente único na base histórica. Essa medida é exploratória e não controla
 a janela de observação. Clientes que compraram no final do período tiveram
-menos tempo disponível para realizar uma nova compra.
+menos tempo disponível para realizar uma nova compra, o que pode subestimar
+as taxas de retorno reais.
 </p>
 
-{figura_html(grafico_retorno, 5, "Retorno observado segundo a avaliação inicial")}
+{figura_html(grafico_retorno, 9, "Retorno observado segundo a avaliação da primeira experiência")}
 
 <h2>4 Recomendações executivas</h2>
 
@@ -1269,6 +1794,18 @@ A recompra não foi analisada por coorte ou janela temporal fixa.
 
 <li>
 Outliers foram identificados, mas não excluídos automaticamente.
+</li>
+
+<li>
+A distância entre vendedor e comprador foi calculada em linha reta pela
+fórmula de Haversine, a partir do centroide do prefixo de CEP. Essa
+estimativa não representa a distância real percorrida pelo transportador.
+</li>
+
+<li>
+Pedidos sem correspondência na tabela de geolocalização foram excluídos
+da análise de distância, o que pode introduzir viés geográfico nos resultados
+dessa seção específica.
 </li>
 
 <li>
