@@ -113,6 +113,7 @@ jobs:
           BRANCH: ${{ github.ref_name }}
           SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REPO: ${{ github.repository }}
         run: |
           # Verifica se já existe PR aberto para este branch → Development
           existing=$(gh pr list \
@@ -127,25 +128,45 @@ jobs:
             exit 0
           fi
 
-          # Gera o corpo do PR como arquivo temporário para evitar problemas de escaping
-          printf "## PR automático — Feature CI\n\n\
-          **Branch:** %s\n\
-          **Commit:** %s\n\
-          **Build:** %s\n\n\
-          Todos os checks de lint, formatação e estrutura de notebooks passaram.\n\n\
-          ### Checklist de revisão\n\
-          - [x] Ruff lint\n\
-          - [x] Black formatação\n\
-          - [x] Estrutura dos notebooks validada\n\
-          - [ ] Code review aprovado\n\
-          - [ ] Merge para Development\n" \
-            "$BRANCH" "${SHA:0:7}" "$RUN_URL" > /tmp/pr_body.md
+          # Gera o corpo do PR como arquivo temporário
+          {
+            echo "## PR automatico - Feature CI"
+            echo ""
+            echo "Branch: ${BRANCH}"
+            echo "Commit: ${SHA:0:7}"
+            echo "Build: ${RUN_URL}"
+            echo ""
+            echo "Todos os checks de lint, formatacao e estrutura de notebooks passaram."
+            echo ""
+            echo "### Checklist de revisao"
+            echo "- [x] Ruff lint"
+            echo "- [x] Black formatacao"
+            echo "- [x] Estrutura dos notebooks validada"
+            echo "- [ ] Code review aprovado"
+            echo "- [ ] Merge para Development"
+          } > /tmp/pr_body.md
 
-          # Cria o PR
-          pr_url=$(gh pr create \
+          # Cria o PR — captura stderr para diagnóstico preciso
+          set +e
+          pr_output=$(gh pr create \
             --base Development \
             --head "$BRANCH" \
             --title "feat: ${BRANCH#feature/}" \
-            --body-file /tmp/pr_body.md)
+            --body-file /tmp/pr_body.md 2>&1)
+          pr_exit=$?
+          set -e
 
-          echo "::notice::PR criado com sucesso: ${pr_url}"
+          if [ $pr_exit -ne 0 ]; then
+            # Diagnóstico específico para o erro de permissão mais comum
+            if echo "$pr_output" | grep -q "not permitted to create or approve pull requests"; then
+              echo "::error::O GITHUB_TOKEN não tem permissão para criar PRs neste repositório."
+              echo "::error::Acesse: https://github.com/${REPO}/settings/actions"
+              echo "::error::Em 'Workflow permissions', marque 'Allow GitHub Actions to create and approve pull requests' e salve."
+              echo "::error::Depois reexecute este workflow (re-run failed jobs)."
+            else
+              echo "::error::Falha ao criar PR: ${pr_output}"
+            fi
+            exit 1
+          fi
+
+          echo "::notice::PR criado com sucesso: ${pr_output}"
