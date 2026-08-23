@@ -1,0 +1,151 @@
+name: Feature CI
+
+# Disparado em todo push para branches de feature.
+# Executa lint, formatação e validação estrutural dos notebooks.
+# Se todos os checks passarem, abre PR automaticamente para Development.
+
+on:
+  push:
+    branches:
+      - "feature/**"
+
+# Cancela execuções antigas do mesmo branch ao receber novo push.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# contents: read  — para checkout
+# pull-requests: write — para abrir PR automaticamente
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # JOB 1: Lint, formatação e validação estrutural dos notebooks
+  # Mesmos checks do validate.yml, mas disparados por push na feature.
+  # ---------------------------------------------------------------------------
+  validate:
+    name: Lint & Format & Notebook Structure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dev dependencies
+        run: pip install --quiet -r requirements-dev.txt
+
+      # Ruff verifica .py e .ipynb (configurado em pyproject.toml via extend-include)
+      - name: Ruff — lint Python + notebooks
+        run: ruff check . --output-format=github
+
+      # Black verifica formatação de .py e .ipynb (black[jupyter] instalado)
+      - name: Black — check formatting
+        run: black --check --diff .
+
+      # Valida JSON, nbformat >= 4 e presença de kernelspec em todos os notebooks.
+      - name: Validate notebook structure and metadata
+        run: |
+          python - <<'PYEOF'
+          import json, sys, pathlib
+
+          notebooks = sorted(
+              p for p in pathlib.Path(".").rglob("*.ipynb")
+              if ".ipynb_checkpoints" not in str(p)
+              and "build/" not in str(p)
+          )
+
+          if not notebooks:
+              print("No notebooks found — nothing to validate.")
+              sys.exit(0)
+
+          errors = []
+          for nb in notebooks:
+              try:
+                  with open(nb, encoding="utf-8") as f:
+                      data = json.load(f)
+                  fmt = data.get("nbformat", 0)
+                  if fmt < 4:
+                      errors.append(
+                          f"::error file={nb}::[nbformat] {fmt} < 4"
+                      )
+                  ks = data.get("metadata", {}).get("kernelspec", {})
+                  if not ks:
+                      print(f"::warning file={nb}::[kernelspec] No kernel metadata")
+              except json.JSONDecodeError as e:
+                  errors.append(f"::error file={nb}::[json] Invalid JSON — {e}")
+
+          if errors:
+              for err in errors:
+                  print(err)
+              sys.exit(1)
+
+          print(f"Notebooks validados: {len(notebooks)}")
+          PYEOF
+
+  # ---------------------------------------------------------------------------
+  # JOB 2: Abre PR para Development se todos os checks passarem
+  # Pula silenciosamente se o PR já existir.
+  # ---------------------------------------------------------------------------
+  open-pr:
+    name: Open PR → Development
+    runs-on: ubuntu-latest
+    needs: validate
+    if: success()
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create PR to Development (skip if already exists)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # Verifica se já existe PR aberto para este branch → Development
+          existing=$(gh pr list \
+            --base Development \
+            --head "$BRANCH" \
+            --state open \
+            --json number \
+            --jq '.[0].number' 2>/dev/null || echo "")
+
+          if [ -n "$existing" ]; then
+            echo "::notice::PR #${existing} já existe para ${BRANCH} → Development. Nenhuma ação necessária."
+            exit 0
+          fi
+
+          # Gera o corpo do PR como arquivo temporário para evitar problemas de escaping
+          printf "## PR automático — Feature CI\n\n\
+          **Branch:** %s\n\
+          **Commit:** %s\n\
+          **Build:** %s\n\n\
+          Todos os checks de lint, formatação e estrutura de notebooks passaram.\n\n\
+          ### Checklist de revisão\n\
+          - [x] Ruff lint\n\
+          - [x] Black formatação\n\
+          - [x] Estrutura dos notebooks validada\n\
+          - [ ] Code review aprovado\n\
+          - [ ] Merge para Development\n" \
+            "$BRANCH" "${SHA:0:7}" "$RUN_URL" > /tmp/pr_body.md
+
+          # Cria o PR
+          pr_url=$(gh pr create \
+            --base Development \
+            --head "$BRANCH" \
+            --title "feat: ${BRANCH#feature/}" \
+            --body-file /tmp/pr_body.md)
+
+          echo "::notice::PR criado com sucesso: ${pr_url}"
