@@ -58,6 +58,7 @@ plt.rcParams["font.family"] = "DejaVu Sans"
 # Funções auxiliares
 # ---------------------------------------------------------------------
 
+
 def carregar_csv(nome_arquivo):
     """Carrega um CSV da pasta database."""
     caminho = DATA_DIR / nome_arquivo
@@ -116,10 +117,7 @@ def anotar_barras(ax, formato="{:.2f}"):
         if pd.notna(altura):
             ax.annotate(
                 formato.format(altura),
-                (
-                    barra.get_x() + barra.get_width() / 2,
-                    altura
-                ),
+                (barra.get_x() + barra.get_width() / 2, altura),
                 ha="center",
                 va="bottom",
                 xytext=(0, 5),
@@ -210,19 +208,13 @@ verificar_unicidade(sellers, "seller_id", "sellers")
 # agrupada por `order_id`.
 
 # %%
-pagamentos_pedido = (
-    payments
-    .groupby("order_id", as_index=False)
-    .agg(
-        payment_value=("payment_value", "sum"),
-        payment_installments=("payment_installments", "max"),
-        payment_types=(
-            "payment_type",
-            lambda valores: ", ".join(
-                sorted(valores.dropna().astype(str).unique())
-            ),
-        ),
-    )
+pagamentos_pedido = payments.groupby("order_id", as_index=False).agg(
+    payment_value=("payment_value", "sum"),
+    payment_installments=("payment_installments", "max"),
+    payment_types=(
+        "payment_type",
+        lambda valores: ", ".join(sorted(valores.dropna().astype(str).unique())),
+    ),
 )
 
 verificar_unicidade(pagamentos_pedido, "order_id", "pagamentos_pedido")
@@ -241,14 +233,12 @@ verificar_unicidade(pagamentos_pedido, "order_id", "pagamentos_pedido")
 # %%
 if "review_answer_timestamp" in reviews.columns:
     reviews["review_answer_timestamp"] = pd.to_datetime(
-        reviews["review_answer_timestamp"],
-        errors="coerce"
+        reviews["review_answer_timestamp"], errors="coerce"
     )
 
 if "review_creation_date" in reviews.columns:
     reviews["review_creation_date"] = pd.to_datetime(
-        reviews["review_creation_date"],
-        errors="coerce"
+        reviews["review_creation_date"], errors="coerce"
     )
 
 coluna_data_review = (
@@ -258,15 +248,12 @@ coluna_data_review = (
 )
 
 reviews_ordenadas = reviews.sort_values(
-    by=["order_id", coluna_data_review],
-    na_position="first"
+    by=["order_id", coluna_data_review], na_position="first"
 )
 
-reviews_pedido = (
-    reviews_ordenadas
-    .drop_duplicates(subset="order_id", keep="last")
-    [["order_id", "review_score"]]
-)
+reviews_pedido = reviews_ordenadas.drop_duplicates(subset="order_id", keep="last")[
+    ["order_id", "review_score"]
+]
 
 verificar_unicidade(reviews_pedido, "order_id", "reviews_pedido")
 
@@ -289,19 +276,8 @@ verificar_unicidade(reviews_pedido, "order_id", "reviews_pedido")
 
 # %%
 df_pedidos = (
-    orders
-    .merge(
-        pagamentos_pedido,
-        on="order_id",
-        how="left",
-        validate="one_to_one"
-    )
-    .merge(
-        reviews_pedido,
-        on="order_id",
-        how="left",
-        validate="one_to_one"
-    )
+    orders.merge(pagamentos_pedido, on="order_id", how="left", validate="one_to_one")
+    .merge(reviews_pedido, on="order_id", how="left", validate="one_to_one")
     .merge(
         customers[
             [
@@ -313,7 +289,7 @@ df_pedidos = (
         ],
         on="customer_id",
         how="left",
-        validate="many_to_one"
+        validate="many_to_one",
     )
 )
 
@@ -348,9 +324,7 @@ df_pedidos["dias_atraso"] = (
 df_pedidos["foi_atraso"] = df_pedidos["dias_atraso"] > 0
 
 df_pedidos["mes_compra"] = (
-    df_pedidos["order_purchase_timestamp"]
-    .dt.to_period("M")
-    .astype(str)
+    df_pedidos["order_purchase_timestamp"].dt.to_period("M").astype(str)
 )
 
 df_entregues = df_pedidos.dropna(
@@ -358,20 +332,16 @@ df_entregues = df_pedidos.dropna(
 ).copy()
 
 df_entregues["status_entrega"] = np.where(
-    df_entregues["foi_atraso"],
-    "Com atraso",
-    "No prazo"
+    df_entregues["foi_atraso"], "Com atraso", "No prazo"
 )
 
 # Definição operacional de receita em risco
-df_entregues["receita_em_risco_flag"] = (
-    (df_entregues["foi_atraso"])
-    & (df_entregues["review_score"] <= 2)
+df_entregues["receita_em_risco_flag"] = (df_entregues["foi_atraso"]) & (
+    df_entregues["review_score"] <= 2
 )
 
 receita_em_risco = df_entregues.loc[
-    df_entregues["receita_em_risco_flag"],
-    "payment_value"
+    df_entregues["receita_em_risco_flag"], "payment_value"
 ].sum()
 
 total_pedidos_entregues = len(df_entregues)
@@ -413,8 +383,7 @@ limite_inferior = q1 - 1.5 * iqr
 limite_superior = q3 + 1.5 * iqr
 
 outliers_atraso = dias_atraso_validos[
-    (dias_atraso_validos < limite_inferior)
-    | (dias_atraso_validos > limite_superior)
+    (dias_atraso_validos < limite_inferior) | (dias_atraso_validos > limite_superior)
 ]
 
 estatisticas_atraso = {
@@ -450,26 +419,20 @@ for chave, valor in estatisticas_atraso.items():
 
 # %%
 satisfacao = (
-    df_entregues
-    .dropna(subset=["review_score"])
+    df_entregues.dropna(subset=["review_score"])
     .groupby("status_entrega")
     .agg(
         pedidos=("order_id", "nunique"),
         nota_media=("review_score", "mean"),
         nota_mediana=("review_score", "median"),
         desvio_padrao=("review_score", "std"),
-        percentual_notas_baixas=(
-            "review_score",
-            lambda x: (x <= 2).mean() * 100
-        ),
+        percentual_notas_baixas=("review_score", lambda x: (x <= 2).mean() * 100),
     )
     .reset_index()
 )
 
 ordem_status = ["No prazo", "Com atraso"]
-satisfacao["ordem"] = satisfacao["status_entrega"].map(
-    {"No prazo": 0, "Com atraso": 1}
-)
+satisfacao["ordem"] = satisfacao["status_entrega"].map({"No prazo": 0, "Com atraso": 1})
 satisfacao = satisfacao.sort_values("ordem")
 
 # Gráfico
@@ -484,9 +447,7 @@ ax = sns.barplot(
 )
 
 ax.set_title(
-    "Avaliação média segundo o status da entrega",
-    fontsize=15,
-    fontweight="bold"
+    "Avaliação média segundo o status da entrega", fontsize=15, fontweight="bold"
 )
 ax.set_xlabel("Status da entrega")
 ax.set_ylabel("Nota média")
@@ -528,9 +489,7 @@ ax = sns.barplot(
 )
 
 ax.set_title(
-    "Estados com maior receita associada ao risco",
-    fontsize=15,
-    fontweight="bold"
+    "Estados com maior receita associada ao risco", fontsize=15, fontweight="bold"
 )
 ax.set_xlabel("Receita associada ao risco")
 ax.set_ylabel("Estado")
@@ -564,23 +523,16 @@ grafico_estado = salvar_grafico("risco_por_estado.png")
 # Lifetime Value, pois a base possui período histórico limitado.
 
 # %%
-frequencia_cliente = (
-    df_pedidos
-    .groupby("customer_unique_id", as_index=False)
-    .agg(total_pedidos=("order_id", "nunique"))
+frequencia_cliente = df_pedidos.groupby("customer_unique_id", as_index=False).agg(
+    total_pedidos=("order_id", "nunique")
 )
 
 df_entregues = df_entregues.merge(
-    frequencia_cliente,
-    on="customer_unique_id",
-    how="left",
-    validate="many_to_one"
+    frequencia_cliente, on="customer_unique_id", how="left", validate="many_to_one"
 )
 
 df_entregues["perfil_cliente"] = np.where(
-    df_entregues["total_pedidos"] > 1,
-    "Cliente recorrente",
-    "Novo cliente"
+    df_entregues["total_pedidos"] > 1, "Cliente recorrente", "Novo cliente"
 )
 
 risco_perfil = (
@@ -606,9 +558,7 @@ ax = sns.barplot(
 )
 
 ax.set_title(
-    "Receita associada ao risco por perfil de cliente",
-    fontsize=15,
-    fontweight="bold"
+    "Receita associada ao risco por perfil de cliente", fontsize=15, fontweight="bold"
 )
 ax.set_xlabel("Perfil do cliente")
 ax.set_ylabel("Receita associada ao risco")
@@ -618,10 +568,7 @@ for barra in ax.patches:
 
     ax.annotate(
         formatar_brl(valor),
-        (
-            barra.get_x() + barra.get_width() / 2,
-            valor
-        ),
+        (barra.get_x() + barra.get_width() / 2, valor),
         ha="center",
         va="bottom",
         xytext=(0, 5),
@@ -665,9 +612,7 @@ ax = sns.lineplot(
 )
 
 ax.set_title(
-    "Evolução mensal da receita associada ao risco",
-    fontsize=15,
-    fontweight="bold"
+    "Evolução mensal da receita associada ao risco", fontsize=15, fontweight="bold"
 )
 ax.set_xlabel("Mês da compra")
 ax.set_ylabel("Receita associada ao risco")
@@ -694,23 +639,16 @@ df_cliente_ordem = df_pedidos.sort_values(
     ["customer_unique_id", "order_purchase_timestamp"]
 ).copy()
 
-primeiro_pedido = (
-    df_cliente_ordem
-    .drop_duplicates("customer_unique_id", keep="first")
-    [["customer_unique_id", "review_score"]]
-)
+primeiro_pedido = df_cliente_ordem.drop_duplicates("customer_unique_id", keep="first")[
+    ["customer_unique_id", "review_score"]
+]
 
-contagem_pedidos = (
-    df_pedidos
-    .groupby("customer_unique_id", as_index=False)
-    .agg(total_pedidos=("order_id", "nunique"))
+contagem_pedidos = df_pedidos.groupby("customer_unique_id", as_index=False).agg(
+    total_pedidos=("order_id", "nunique")
 )
 
 retencao = primeiro_pedido.merge(
-    contagem_pedidos,
-    on="customer_unique_id",
-    how="left",
-    validate="one_to_one"
+    contagem_pedidos, on="customer_unique_id", how="left", validate="one_to_one"
 )
 
 retencao["voltou_a_comprar"] = retencao["total_pedidos"] > 1
@@ -738,9 +676,7 @@ taxa_retorno = (
     )
 )
 
-taxa_retorno["taxa_retorno_percentual"] = (
-    taxa_retorno["taxa_retorno"] * 100
-)
+taxa_retorno["taxa_retorno_percentual"] = taxa_retorno["taxa_retorno"] * 100
 
 ordem_retorno = {
     "Notas 1 a 3": 0,
@@ -748,9 +684,7 @@ ordem_retorno = {
     "Nota 5": 2,
 }
 
-taxa_retorno["ordem"] = taxa_retorno["satisfacao_inicial"].map(
-    ordem_retorno
-)
+taxa_retorno["ordem"] = taxa_retorno["satisfacao_inicial"].map(ordem_retorno)
 taxa_retorno = taxa_retorno.sort_values("ordem")
 
 plt.figure(figsize=(9, 6))
@@ -766,7 +700,7 @@ ax = sns.barplot(
 ax.set_title(
     "Retorno observado segundo a avaliação da primeira experiência",
     fontsize=15,
-    fontweight="bold"
+    fontweight="bold",
 )
 ax.set_xlabel("Avaliação da primeira experiência")
 ax.set_ylabel("Clientes com mais de um pedido (%)")
@@ -776,10 +710,7 @@ for barra in ax.patches:
 
     ax.annotate(
         formatar_percentual(valor, 2),
-        (
-            barra.get_x() + barra.get_width() / 2,
-            valor
-        ),
+        (barra.get_x() + barra.get_width() / 2, valor),
         ha="center",
         va="bottom",
         xytext=(0, 5),
@@ -812,15 +743,17 @@ grafico_retorno = salvar_grafico("retorno_por_satisfacao.png")
 # regras abaixo são uma adaptação acadêmica para o relatório analítico.
 
 # %%
-nota_no_prazo = satisfacao.loc[
-    satisfacao["status_entrega"] == "No prazo",
-    "nota_media"
-].iloc[0] if "No prazo" in satisfacao["status_entrega"].values else np.nan
+nota_no_prazo = (
+    satisfacao.loc[satisfacao["status_entrega"] == "No prazo", "nota_media"].iloc[0]
+    if "No prazo" in satisfacao["status_entrega"].values
+    else np.nan
+)
 
-nota_atraso = satisfacao.loc[
-    satisfacao["status_entrega"] == "Com atraso",
-    "nota_media"
-].iloc[0] if "Com atraso" in satisfacao["status_entrega"].values else np.nan
+nota_atraso = (
+    satisfacao.loc[satisfacao["status_entrega"] == "Com atraso", "nota_media"].iloc[0]
+    if "Com atraso" in satisfacao["status_entrega"].values
+    else np.nan
+)
 
 diferenca_nota = nota_no_prazo - nota_atraso
 
@@ -856,13 +789,12 @@ tabela_satisfacao.columns = [
 tabela_satisfacao_html = tabela_satisfacao.to_html(
     index=False,
     classes="tabela",
-    float_format=lambda valor: f"{valor:.2f}".replace(".", ",")
+    float_format=lambda valor: f"{valor:.2f}".replace(".", ","),
 )
 
 tabela_estados_html = risco_estado.head(10).copy()
-tabela_estados_html["receita_em_risco"] = (
-    tabela_estados_html["receita_em_risco"]
-    .map(formatar_brl)
+tabela_estados_html["receita_em_risco"] = tabela_estados_html["receita_em_risco"].map(
+    formatar_brl
 )
 
 tabela_estados_html = tabela_estados_html.rename(
@@ -878,9 +810,9 @@ tabela_estados_html = tabela_estados_html.rename(
         "Pedidos em risco",
     ]
 ].to_html(
-    index=False,
-    classes="tabela"
+    index=False, classes="tabela"
 )
+
 
 def figura_html(caminho, numero, titulo):
     imagem = imagem_base64(caminho)
@@ -1429,9 +1361,6 @@ print(f"\nRelatório HTML gerado em: {caminho_html}")
 # %%
 caminho_pdf = REPORT_DIR / "relatorio_executivo.pdf"
 
-HTML(
-    filename=str(caminho_html),
-    base_url=str(REPORT_DIR)
-).write_pdf(str(caminho_pdf))
+HTML(filename=str(caminho_html), base_url=str(REPORT_DIR)).write_pdf(str(caminho_pdf))
 
 print(f"PDF gerado em: {caminho_pdf}")
