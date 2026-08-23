@@ -118,10 +118,12 @@ jobs:
             out="build/notebooks/${out_name}"
 
             echo "::group::Executing: $rel"
+            nb_dir="$(dirname "$nb")"
             if papermill "$nb" "$out" \
                 --execution-timeout 300 \
                 --kernel python3 \
-                --no-progress-bar 2>&1; then
+                --no-progress-bar \
+                --cwd "$nb_dir" 2>&1; then
               echo "✓ Success: $rel"
             else
               echo "::error file=$rel::Notebook execution failed — check cell output above"
