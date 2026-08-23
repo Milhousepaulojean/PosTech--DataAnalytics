@@ -25,16 +25,17 @@
 # - análise associativa: identifica relações, mas não prova causalidade.
 
 # %%
-from pathlib import Path
-from datetime import datetime
 import base64
 import html
 import warnings
+from datetime import datetime
+from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
+from weasyprint import HTML
 
 warnings.filterwarnings("ignore")
 
@@ -1204,7 +1205,7 @@ do qual se encontram aproximadamente 90% das observações válidas de prazo.
 </p>
 
 <p>
-Foram identificadas, pelo critério exploratório do IQR, 
+Foram identificadas, pelo critério exploratório do IQR,
 <strong>{estatisticas_atraso["outliers_iqr"]:,}</strong> observações
 potencialmente extremas. Esses registros não foram removidos automaticamente,
 porque um outlier pode representar erro, evento excepcional ou ocorrência real
@@ -1426,8 +1427,6 @@ with open(caminho_html, "w", encoding="utf-8") as arquivo:
 
 print(f"\nRelatório HTML gerado em: {caminho_html}")
 # %%
-from weasyprint import HTML
-
 caminho_pdf = REPORT_DIR / "relatorio_executivo.pdf"
 
 HTML(
