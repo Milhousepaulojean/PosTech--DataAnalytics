@@ -1245,6 +1245,48 @@ def figura_html(caminho, numero, titulo):
     """
 
 
+sumario_html = """
+<section class="sumario">
+<h2>Sumário</h2>
+<ol>
+<li><a href="#resumo-executivo">Resumo executivo</a></li>
+<li><a href="#objetivos">Objetivos</a>
+    <ol>
+    <li><a href="#objetivo-geral">Objetivo geral</a></li>
+    <li><a href="#objetivos-especificos">Objetivos específicos</a></li>
+    </ol>
+</li>
+<li><a href="#metodologia">Metodologia</a>
+    <ol>
+    <li><a href="#unidade-analise">Unidade de análise</a></li>
+    <li><a href="#definicao-atraso">Definição de atraso</a></li>
+    <li><a href="#definicao-receita-risco">Definição de receita associada ao risco</a></li>
+    <li><a href="#tratamento-estatistico">Tratamento estatístico</a></li>
+    </ol>
+</li>
+<li><a href="#resultados">Resultados</a>
+    <ol>
+    <li><a href="#desempenho-entrega-satisfacao">Desempenho da entrega e satisfação</a></li>
+    <li><a href="#estatisticas-atraso">Estatísticas de atraso, dispersão e outliers</a></li>
+    <li><a href="#exposicao-estado">Exposição financeira por estado</a></li>
+    <li><a href="#gargalo-logistico">Gargalo logístico: vendedor versus transportadora</a></li>
+    <li><a href="#sazonalidade-risco">Sazonalidade da receita em risco</a></li>
+    <li><a href="#peso-frete-atraso">Relação entre peso do produto, frete e atraso</a></li>
+    <li><a href="#distancia-desempenho">Impacto da distância no desempenho logístico</a></li>
+    <li><a href="#distribuicao-avaliacoes">Distribuição mensal de avaliações</a></li>
+    <li><a href="#perfil-cliente">Perfil do cliente observado</a></li>
+    <li><a href="#retencao-exploratoria">Retenção exploratória após a primeira experiência</a></li>
+    </ol>
+</li>
+<li><a href="#recomendacoes">Recomendações executivas</a></li>
+<li><a href="#limitacoes">Limitações</a></li>
+<li><a href="#conclusao">Conclusão</a></li>
+<li><a href="#referencias">Referências</a></li>
+</ol>
+</section>
+"""
+
+
 html_relatorio = f"""
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -1301,6 +1343,20 @@ h3 {{
 
 .capa p {{
     text-align: center;
+}}
+
+.sumario {{
+    page-break-after: always;
+    margin: 20px 0 30px 0;
+}}
+
+.sumario ol {{
+    margin-top: 8px;
+}}
+
+.sumario a {{
+    text-decoration: none;
+    color: #222;
 }}
 
 .resumo-executivo {{
@@ -1401,16 +1457,18 @@ ul {{
 
     <br><br><br>
 
-    <p>JULIA AYUMI SUZUKI</p>
+    <p>Julia Ayumi Suzuki</p>
     <p>Pâmela Cristina da Silva</p>
-    <p>LARISSA NICOLI RODRIGUES</p>
+    <p>Larissa Nicoli Rodrigues</p>
     <p>Matheus Silva de Jesus</p>
     <p>Paulo Jean Alves da Silva</p>
     <p>São Paulo</p>
     <p>{datetime.now().year}</p>
 </section>
 
-<h2>Resumo executivo</h2>
+{sumario_html}
+
+<h2 id="resumo-executivo">Resumo executivo</h2>
 
 <div class="resumo-executivo">
 <p>
@@ -1450,16 +1508,16 @@ taxa de pedidos atrasados.
 receita associada ao risco operacional.
 </div>
 
-<h2>1 Objetivos</h2>
+<h2 id="objetivos">1 Objetivos</h2>
 
-<h3>1.1 Objetivo geral</h3>
+<h3 id="objetivo-geral">1.1 Objetivo geral</h3>
 
 <p>
 Analisar como o desempenho logístico está associado à satisfação dos clientes e
 à exposição financeira da operação de comércio eletrônico.
 </p>
 
-<h3>1.2 Objetivos específicos</h3>
+<h3 id="objetivos-especificos">1.2 Objetivos específicos</h3>
 
 <ul>
 <li>Comparar a satisfação de pedidos entregues no prazo e com atraso;</li>
@@ -1470,7 +1528,7 @@ Analisar como o desempenho logístico está associado à satisfação dos client
 <li>avaliar, de forma exploratória, a relação entre primeira avaliação e retorno.</li>
 </ul>
 
-<h2>2 Metodologia</h2>
+<h2 id="metodologia">2 Metodologia</h2>
 
 <p>
 A análise foi desenvolvida com Python, utilizando as bibliotecas Pandas,
@@ -1479,7 +1537,7 @@ pagamentos, avaliações, clientes, itens, produtos e vendedores do conjunto de
 dados público da Olist.
 </p>
 
-<h3>2.1 Unidade de análise</h3>
+<h3 id="unidade-analise">2.1 Unidade de análise</h3>
 
 <p>
 A análise financeira e de satisfação foi realizada no nível do pedido, com uma
@@ -1493,7 +1551,7 @@ itens. Essas duas granularidades não devem ser misturadas quando houver soma de
 valores financeiros do pedido.
 </p>
 
-<h3>2.2 Definição de atraso</h3>
+<h3 id="definicao-atraso">2.2 Definição de atraso</h3>
 
 <p>
 Um pedido foi classificado como atrasado quando a data efetiva de entrega ao
@@ -1501,7 +1559,7 @@ cliente foi posterior à data estimada de entrega:
 <strong>dias de atraso > 0</strong>.
 </p>
 
-<h3>2.3 Definição de receita associada ao risco</h3>
+<h3 id="definicao-receita-risco">2.3 Definição de receita associada ao risco</h3>
 
 <p>
 Foi considerado associado ao risco o valor pago em pedidos que atenderam
@@ -1515,7 +1573,7 @@ Ela representa uma medida descritiva de exposição financeira associada a uma
 experiência operacional negativa.
 </div>
 
-<h3>2.4 Tratamento estatístico</h3>
+<h3 id="tratamento-estatistico">2.4 Tratamento estatístico</h3>
 
 <p>
 Foram utilizadas média, mediana, desvio-padrão, quartis, intervalo
@@ -1523,9 +1581,9 @@ interquartílico e percentil 90. A mediana e os percentis foram incluídos porqu
 tempos de entrega podem apresentar assimetria e valores extremos.
 </p>
 
-<h2>3 Resultados</h2>
+<h2 id="resultados">3 Resultados</h2>
 
-<h3>3.1 Desempenho da entrega e satisfação</h3>
+<h3 id="desempenho-entrega-satisfacao">3.1 Desempenho da entrega e satisfação</h3>
 
 <p>
 A avaliação média dos pedidos entregues no prazo foi de
@@ -1544,7 +1602,7 @@ influenciar a nota.
 
 {figura_html(grafico_satisfacao, 1, "Avaliação média segundo o status da entrega")}
 
-<h3>3.2 Estatísticas de atraso, dispersão e outliers</h3>
+<h3 id="estatisticas-atraso">3.2 Estatísticas de atraso, dispersão e outliers</h3>
 
 <p>
 O atraso apresentou mediana de
@@ -1561,7 +1619,7 @@ porque um outlier pode representar erro, evento excepcional ou ocorrência real
 de interesse operacional.
 </p>
 
-<h3>3.3 Exposição financeira por estado</h3>
+<h3 id="exposicao-estado">3.3 Exposição financeira por estado</h3>
 
 <p>
 Os estados com maior valor absoluto de receita associada ao risco estão
@@ -1580,7 +1638,7 @@ Tabela 1 — Estados com maior receita associada ao risco.
 Fonte: elaboração própria com base nos dados da Olist.
 </p>
 
-<h3>3.4 Gargalo logístico: vendedor versus transportadora</h3>
+<h3 id="gargalo-logistico">3.4 Gargalo logístico: vendedor versus transportadora</h3>
 
 <p>
 A cadeia logística foi dividida em duas etapas: o intervalo entre a data da
@@ -1609,7 +1667,7 @@ na média observada.
 
 {figura_html(grafico_gargalo, 3, "Gargalo logístico: tempo médio por etapa em pedidos atrasados")}
 
-<h3>3.5 Sazonalidade da receita em risco</h3>
+<h3 id="sazonalidade-risco">3.5 Sazonalidade da receita em risco</h3>
 
 <p>
 A evolução mensal da receita associada ao risco indica períodos de maior
@@ -1633,7 +1691,7 @@ indicativa, não conclusiva.
 
 {figura_html(grafico_sazonalidade, 4, "Sazonalidade da receita em risco com destaque para pico sazonal")}
 
-<h3>3.6 Relação entre peso do produto, frete e atraso</h3>
+<h3 id="peso-frete-atraso">3.6 Relação entre peso do produto, frete e atraso</h3>
 
 <p>
 A correlação entre o peso médio do produto e os dias de atraso foi de
@@ -1651,7 +1709,7 @@ sistêmico na capacidade operacional da malha de distribuição.
 
 {figura_html(grafico_peso_frete, 5, "Peso médio e frete total versus dias de atraso (pedidos atrasados)")}
 
-<h3>3.7 Impacto da distância no desempenho logístico</h3>
+<h3 id="distancia-desempenho">3.7 Impacto da distância no desempenho logístico</h3>
 
 <p>
 A distância entre vendedor e comprador foi estimada pela fórmula de Haversine,
@@ -1679,7 +1737,7 @@ desta análise por não possuírem correspondência na tabela de geolocalizaçã
 
 {figura_html(grafico_distancia, 6, "Distância vs. desempenho logístico: tempo de transporte e taxa de atraso por faixa")}
 
-<h3>3.8 Distribuição mensal de avaliações</h3>
+<h3 id="distribuicao-avaliacoes">3.8 Distribuição mensal de avaliações</h3>
 
 <p>
 O gráfico de barras empilhadas apresenta a distribuição percentual das
@@ -1696,11 +1754,11 @@ tornar os percentuais mensais menos estáveis.
 
 {figura_html(grafico_dist_mensal, 7, "Distribuição mensal percentual de avaliações (2016–2018)")}
 
-<h3>3.9 Perfil do cliente observado</h3>
+<h3 id="perfil-cliente">3.9 Perfil do cliente observado</h3>
 
 <p>
 A segmentação entre novo cliente e cliente recorrente observado foi construída
-com base na quantidade de pedidos por <code>customer_unique_id</code>.
+com base na quantidade de pedidos.
 Clientes com mais de um pedido foram classificados como recorrentes observados.
 </p>
 
@@ -1714,7 +1772,7 @@ tiveram menos oportunidade de realizar uma segunda compra.
 
 {figura_html(grafico_perfil, 8, "Receita associada ao risco por perfil de cliente observado")}
 
-<h3>3.10 Retenção exploratória após a primeira experiência</h3>
+<h3 id="retencao-exploratoria">3.10 Retenção exploratória após a primeira experiência</h3>
 
 <p>
 A recompra foi aproximada pela existência de mais de um pedido para o mesmo
@@ -1726,7 +1784,7 @@ as taxas de retorno reais.
 
 {figura_html(grafico_retorno, 9, "Retorno observado segundo a avaliação da primeira experiência")}
 
-<h2>4 Recomendações executivas</h2>
+<h2 id="recomendacoes">4 Recomendações executivas</h2>
 
 <ol>
 <li>
@@ -1766,7 +1824,7 @@ financeiro incremental obtido após a intervenção.
 </li>
 </ol>
 
-<h2>5 Limitações</h2>
+<h2 id="limitacoes">5 Limitações</h2>
 
 <ul>
 <li>
@@ -1814,7 +1872,7 @@ necessariamente, que esse estado tenha a pior performance relativa.
 </li>
 </ul>
 
-<h2>6 Conclusão</h2>
+<h2 id="conclusao">6 Conclusão</h2>
 
 <p>
 A análise indica uma associação relevante entre atraso na entrega e redução da
@@ -1837,7 +1895,7 @@ coorte, segmentação por vendedor e rota, controle de sazonalidade, comparaçã
 de taxas relativas e, quando possível, um teste-piloto de intervenção logística.
 </p>
 
-<h2>Referências</h2>
+<h2 id="referencias">Referências</h2>
 
 <p class="referencia">
 OLIST. <strong>Brazilian E-Commerce Public Dataset by Olist</strong>.
