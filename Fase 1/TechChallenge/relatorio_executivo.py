@@ -317,8 +317,8 @@ print(f"Pedidos únicos: {df_pedidos['order_id'].nunique():,}")
 
 # %%
 df_pedidos["dias_atraso"] = (
-    df_pedidos["order_delivered_customer_date"]
-    - df_pedidos["order_estimated_delivery_date"]
+    df_pedidos["order_delivered_customer_date"].dt.normalize()
+    - df_pedidos["order_estimated_delivery_date"].dt.normalize()
 ).dt.days
 
 df_pedidos["foi_atraso"] = df_pedidos["dias_atraso"] > 0
@@ -800,12 +800,12 @@ ax = sns.lineplot(
 )
 
 ax.set_title(
-    "Sazonalidade da receita em risco (pico sazonal destacado)",
+    "Evolução Mensal da Receita em Risco (Atrasos Críticos)",
     fontsize=15,
     fontweight="bold",
 )
-ax.set_xlabel("Mês da compra")
-ax.set_ylabel("Receita associada ao risco (R$)")
+ax.set_xlabel("Mês da Compra")
+ax.set_ylabel("Volume Financeiro em Risco (R$)")
 plt.xticks(rotation=45)
 
 meses_risco = risco_mensal["mes_compra"].tolist()
@@ -817,9 +817,9 @@ if "2017-11" in meses_risco and "2018-02" in meses_risco:
         x_fim,
         color="red",
         alpha=0.10,
-        label="Pico sazonal (nov/2017–fev/2018)",
+        label="Pico Sazonal (Black Friday/Natal)",
     )
-    ax.legend(loc="upper left")
+    ax.legend()
 
 grafico_sazonalidade = salvar_grafico("sazonalidade_risco.png")
 
