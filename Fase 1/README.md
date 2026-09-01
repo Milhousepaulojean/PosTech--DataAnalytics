@@ -35,7 +35,7 @@ A análise investiga:
 
 ---
 
-## Estrutura de arquivos
+<!-- ## Estrutura de arquivos
 
 ```
 Fase 1/
@@ -58,18 +58,19 @@ Fase 1/
         └── relatorio_executivo.pdf    ← relatório final gerado
 ```
 
----
+--- -->
 
-## Arquivos principais
+## Arquivos para apresentação
 
 | Arquivo | O que é |
 |---|---|
 | [Enunciado (PDF)](TechChallenge/POSTECH%20-%20%5BDTAT%5D%20-%20Tech%20Challenge%20-%20Fase%201.pdf) | Descrição oficial do Tech Challenge |
 | [Notebook.ipynb](TechChallenge/Notebook.ipynb) | Análise exploratória — limpeza, visualizações e insights |
-| [relatorio_executivo.py](TechChallenge/relatorio_executivo.py) | Script Python que gera o relatório HTML e PDF |
+<!-- | [relatorio_executivo.py](TechChallenge/relatorio_executivo.py) | Script Python que gera o relatório HTML e PDF | -->
 | [relatorio_executivo.pdf](TechChallenge/relatorios/relatorio_executivo.pdf) | Relatório executivo final pronto para entrega |
+| [video youtube](https://www.youtube.com/watch?v=qCliC9FgAdg&feature=youtu.be) | Video para apresentação |
 
----
+<!-- ---
 
 ## Como reproduzir
 
@@ -115,4 +116,4 @@ O PDF será salvo em `TechChallenge/relatorios/relatorio_executivo.pdf`.
 - A base cobre um período histórico específico e pode não refletir o cenário atual.
 - Pedidos sem data de entrega foram excluídos da análise de atraso.
 - A recompra não foi analisada por coorte ou janela temporal fixa.
-- Não foram calculados ROI nem custo de intervenção.
+- Não foram calculados ROI nem custo de intervenção. -->
