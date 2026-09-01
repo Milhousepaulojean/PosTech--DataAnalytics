@@ -66,9 +66,10 @@ Fase 1/
 |---|---|
 | [Enunciado (PDF)](TechChallenge/POSTECH%20-%20%5BDTAT%5D%20-%20Tech%20Challenge%20-%20Fase%201.pdf) | Descrição oficial do Tech Challenge |
 | [Notebook.ipynb](TechChallenge/Notebook.ipynb) | Análise exploratória — limpeza, visualizações e insights |
-<!-- | [relatorio_executivo.py](TechChallenge/relatorio_executivo.py) | Script Python que gera o relatório HTML e PDF | -->
 | [relatorio_executivo.pdf](TechChallenge/relatorios/relatorio_executivo.pdf) | Relatório executivo final pronto para entrega |
+| [Apresentação com Slides](TechChallenge/relatorios/ATUALIZAdoImpacto%20da%20Eficiência%20Logística%20no%20E-Commerce.pptx) | Apresentação com Slides |
 | [video youtube](https://www.youtube.com/watch?v=qCliC9FgAdg&feature=youtu.be) | Video para apresentação |
+
 
 <!-- ---
 
