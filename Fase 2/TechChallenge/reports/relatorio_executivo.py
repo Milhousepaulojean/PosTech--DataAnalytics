@@ -6,179 +6,186 @@ from pathlib import Path
 from weasyprint import HTML
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-RESULTS_DIR = ROOT_DIR / 'results'
+RESULTS_DIR = ROOT_DIR / "results"
 REPORTS_DIR = Path(__file__).resolve().parent
 
 PARTICIPANTS = [
-    'Julia Ayumi Suzuki',
-    'Larissa Nicoli Rodrigues',
-    'Matheus Silva de Jesus',
-    'Paulo Jean Alves da Silva',
+    "Julia Ayumi Suzuki",
+    "Larissa Nicoli Rodrigues",
+    "Matheus Silva de Jesus",
+    "Paulo Jean Alves da Silva",
 ]
 
 
 def read_json(path: Path):
-    with path.open('r', encoding='utf-8') as fh:
+    with path.open("r", encoding="utf-8") as fh:
         return json.load(fh)
 
 
 def fmt_metric(value):
     if value is None:
-        return '—'
+        return "—"
     if isinstance(value, (int, float)):
-        return f'{value:.4f}'
+        return f"{value:.4f}"
     return str(value)
 
 
 def build_table(rows, headers):
-    ths = ''.join(f'<th>{header}</th>' for header in headers)
-    trs = ''.join(
-        '<tr>' + ''.join(f'<td>{cell}</td>' for cell in row) + '</tr>'
-        for row in rows
+    ths = "".join(f"<th>{header}</th>" for header in headers)
+    trs = "".join(
+        "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>" for row in rows
     )
-    return f'''
+    return f"""
     <table class="table">
       <thead><tr>{ths}</tr></thead>
       <tbody>{trs}</tbody>
     </table>
-    '''
+    """
 
 
 NOTEBOOK_VISUAL_EXPLANATIONS = {
-    '01_eda.ipynb': [
-        'A distribuição da classe alvo mostra que a classe positiva é minoritária e exige avaliação por métricas orientadas à classe relevante.',
-        'A correlação entre variáveis sugere que a qualidade depende de combinações de atributos, não de um único fator isolado.',
-        'A separação do teor alcoólico por classe reforça o poder discriminativo da variável e a plausibilidade do problema de classificação.',
-        'Os gráficos indicam sinais claros de diferença entre classes, mas também deixam evidente que o problema não é simples de uma variável isolada.',
-        'Esse diagnóstico sustentou a continuidade da modelagem com técnicas mais flexíveis do que a regressão linear simples.'
+    "01_eda.ipynb": [
+        "A distribuição da classe alvo mostra que a classe positiva é minoritária e exige avaliação por métricas orientadas à classe relevante.",
+        "A correlação entre variáveis sugere que a qualidade depende de combinações de atributos, não de um único fator isolado.",
+        "A separação do teor alcoólico por classe reforça o poder discriminativo da variável e a plausibilidade do problema de classificação.",
+        "Os gráficos indicam sinais claros de diferença entre classes, mas também deixam evidente que o problema não é simples de uma variável isolada.",
+        "Esse diagnóstico sustentou a continuidade da modelagem com técnicas mais flexíveis do que a regressão linear simples.",
     ],
-    '02_modelo_e_validacao.ipynb': [
-        'A divisão estratificada entre treino e validação preserva a proporção da classe alvo e reduz risco de vazamento de informação.',
-        'A comparação entre modelos mostra que a acurácia isolada não é suficiente quando a classe positiva é minoritária.',
-        'O equilíbrio entre recall e precision é central para a decisão, especialmente na classe relevante do problema.',
-        'A validação interna reforça que o desempenho deve ser medido em conjunto, e não por uma única métrica isolada.',
-        'Os resultados apontam que o Random Forest e o HistGradientBoosting são os modelos mais competitivos, com diferenças definidas pelo trade-off de negócio.',
-        'A comparação final sustenta a decisão por equilíbrio geral e pela avaliação no conjunto de teste reservado.'
+    "02_modelo_e_validacao.ipynb": [
+        "A divisão estratificada entre treino e validação preserva a proporção da classe alvo e reduz risco de vazamento de informação.",
+        "A comparação entre modelos mostra que a acurácia isolada não é suficiente quando a classe positiva é minoritária.",
+        "O equilíbrio entre recall e precision é central para a decisão, especialmente na classe relevante do problema.",
+        "A validação interna reforça que o desempenho deve ser medido em conjunto, e não por uma única métrica isolada.",
+        "Os resultados apontam que o Random Forest e o HistGradientBoosting são os modelos mais competitivos, com diferenças definidas pelo trade-off de negócio.",
+        "A comparação final sustenta a decisão por equilíbrio geral e pela avaliação no conjunto de teste reservado.",
     ],
-    '03_regressao_linear.ipynb': [
-        'A regressão linear não captura de forma suficiente a relação entre variáveis e a qualidade do vinho.',
-        'Os resíduos sugerem que o padrão é mais complexo e exige modelos não lineares para uma melhor separação da classe alvo.',
-        'Esse diagnóstico confirma que a regressão linear funciona como referência, mas não como solução principal do problema.'
+    "03_regressao_linear.ipynb": [
+        "A regressão linear não captura de forma suficiente a relação entre variáveis e a qualidade do vinho.",
+        "Os resíduos sugerem que o padrão é mais complexo e exige modelos não lineares para uma melhor separação da classe alvo.",
+        "Esse diagnóstico confirma que a regressão linear funciona como referência, mas não como solução principal do problema.",
     ],
-    '04_train_test_split.ipynb': [
-        'A separação entre treino e teste preserva a capacidade de generalização e evita decisões baseadas em overfitting.',
-        'A comparação em dados não vistos é a base mais confiável para a recomendação final.'
+    "04_train_test_split.ipynb": [
+        "A separação entre treino e teste preserva a capacidade de generalização e evita decisões baseadas em overfitting.",
+        "A comparação em dados não vistos é a base mais confiável para a recomendação final.",
     ],
-    '05_validacao_cruzada.ipynb': [
-        'A validação cruzada mostra que o desempenho se mantém estável em diferentes subconjuntos do dado, reduzindo o impacto de uma divisão favorável.'
+    "05_validacao_cruzada.ipynb": [
+        "A validação cruzada mostra que o desempenho se mantém estável em diferentes subconjuntos do dado, reduzindo o impacto de uma divisão favorável."
     ],
-    '06_clusterizacao.ipynb': [
-        'A clusterização não explica diretamente a classe alvo e, por isso, não substitui a modelagem supervisionada.'
+    "06_clusterizacao.ipynb": [
+        "A clusterização não explica diretamente a classe alvo e, por isso, não substitui a modelagem supervisionada."
     ],
-    '07_arvore_decisao_pm.ipynb': [
-        'A árvore aumenta a interpretabilidade do modelo e ajuda a explicar regras de decisão.',
-        'Mesmo com boa explicabilidade, ela não supera a melhor performance global dos modelos de ensemble.'
+    "07_arvore_decisao_pm.ipynb": [
+        "A árvore aumenta a interpretabilidade do modelo e ajuda a explicar regras de decisão.",
+        "Mesmo com boa explicabilidade, ela não supera a melhor performance global dos modelos de ensemble.",
     ],
 }
 
 
 def build_notebook_section(nb_name: str, title: str):
-    nb_path = ROOT_DIR / 'notebooks' / nb_name
-    with nb_path.open('r', encoding='utf-8') as fh:
+    nb_path = ROOT_DIR / "notebooks" / nb_name
+    with nb_path.open("r", encoding="utf-8") as fh:
         notebook = json.load(fh)
 
     images = []
-    for cell in notebook.get('cells', []):
-        for output in cell.get('outputs', []):
-            data = output.get('data', {})
-            if 'image/png' not in data:
+    for cell in notebook.get("cells", []):
+        for output in cell.get("outputs", []):
+            data = output.get("data", {})
+            if "image/png" not in data:
                 continue
-            image_b64 = data['image/png']
+            image_b64 = data["image/png"]
             if isinstance(image_b64, list):
-                image_b64 = ''.join(str(item) for item in image_b64)
+                image_b64 = "".join(str(item) for item in image_b64)
             images.append(image_b64)
 
     explanations = NOTEBOOK_VISUAL_EXPLANATIONS.get(nb_name, [])
-    part_html = [f'<h3>{title}</h3>']
+    part_html = [f"<h3>{title}</h3>"]
     for index, image_b64 in enumerate(images, start=1):
-        explanation = explanations[index - 1] if index - 1 < len(explanations) else 'Este gráfico reforça a conclusão analítica do notebook e sustenta a interpretação do modelo.'
-        part_html.append(
-            f'''
+        explanation = (
+            explanations[index - 1]
+            if index - 1 < len(explanations)
+            else "Este gráfico reforça a conclusão analítica do notebook e sustenta a interpretação do modelo."
+        )
+        part_html.append(f"""
             <figure>
               <img src="data:image/png;base64,{image_b64}" alt="{title} - gráfico {index}" />
               <figcaption>{title} — Gráfico {index}</figcaption>
             </figure>
             <p class="img-explain">{explanation}</p>
-            '''
-        )
-    return ''.join(part_html)
+            """)
+    return "".join(part_html)
 
 
 def build_notebook_sections_html():
     notebook_order = [
-        ('01_eda.ipynb', 'Análise exploratória e entendimento do problema'),
-        ('02_modelo_e_validacao.ipynb', 'Modelagem, comparação e decisão final'),
-        ('03_regressao_linear.ipynb', 'Regressão Linear'),
-        ('04_train_test_split.ipynb', 'Train/Test Split'),
-        ('05_validacao_cruzada.ipynb', 'Validação Cruzada'),
-        ('06_clusterizacao.ipynb', 'Clusterização'),
-        ('07_arvore_decisao_pm.ipynb', 'Árvore de decisão'),
+        ("01_eda.ipynb", "Análise exploratória e entendimento do problema"),
+        ("02_modelo_e_validacao.ipynb", "Modelagem, comparação e decisão final"),
+        ("03_regressao_linear.ipynb", "Regressão Linear"),
+        ("04_train_test_split.ipynb", "Train/Test Split"),
+        ("05_validacao_cruzada.ipynb", "Validação Cruzada"),
+        ("06_clusterizacao.ipynb", "Clusterização"),
+        ("07_arvore_decisao_pm.ipynb", "Árvore de decisão"),
     ]
-    return ''.join(build_notebook_section(nb_name, title) for nb_name, title in notebook_order)
+    return "".join(
+        build_notebook_section(nb_name, title) for nb_name, title in notebook_order
+    )
 
 
 def build_validation_rows(metrics):
     order = [
-        ('baseline_majority', 'Baseline majoritário'),
-        ('logreg_balanced', 'Logistic Regression (balanced)'),
-        ('random_forest_balanced', 'Random Forest (balanced)'),
-        ('hist_gb', 'HistGradientBoosting'),
+        ("baseline_majority", "Baseline majoritário"),
+        ("logreg_balanced", "Logistic Regression (balanced)"),
+        ("random_forest_balanced", "Random Forest (balanced)"),
+        ("hist_gb", "HistGradientBoosting"),
     ]
     rows = []
     for key, label in order:
         item = metrics[key]
-        rows.append([
-            label,
-            fmt_metric(item['accuracy']),
-            fmt_metric(item['precision']),
-            fmt_metric(item['recall']),
-            fmt_metric(item['f1']),
-            fmt_metric(item['roc_auc']),
-            fmt_metric(item['average_precision']),
-        ])
+        rows.append(
+            [
+                label,
+                fmt_metric(item["accuracy"]),
+                fmt_metric(item["precision"]),
+                fmt_metric(item["recall"]),
+                fmt_metric(item["f1"]),
+                fmt_metric(item["roc_auc"]),
+                fmt_metric(item["average_precision"]),
+            ]
+        )
     return rows
 
 
 def build_test_rows(metrics):
     order = [
-        ('baseline_majority', 'Baseline majoritário'),
-        ('random_forest_balanced', 'Random Forest (balanced)'),
-        ('hist_gb', 'HistGradientBoosting'),
+        ("baseline_majority", "Baseline majoritário"),
+        ("random_forest_balanced", "Random Forest (balanced)"),
+        ("hist_gb", "HistGradientBoosting"),
     ]
     rows = []
     for key, label in order:
         item = metrics[key]
-        rows.append([
-            label,
-            fmt_metric(item['accuracy']),
-            fmt_metric(item['precision']),
-            fmt_metric(item['recall']),
-            fmt_metric(item['f1']),
-            fmt_metric(item['roc_auc']),
-            fmt_metric(item['average_precision']),
-        ])
+        rows.append(
+            [
+                label,
+                fmt_metric(item["accuracy"]),
+                fmt_metric(item["precision"]),
+                fmt_metric(item["recall"]),
+                fmt_metric(item["f1"]),
+                fmt_metric(item["roc_auc"]),
+                fmt_metric(item["average_precision"]),
+            ]
+        )
     return rows
 
 
 def build_html():
-    validation_metrics = read_json(RESULTS_DIR / 'model_validation_metrics.json')
-    test_metrics = read_json(RESULTS_DIR / 'final_test_evaluation.json')
+    validation_metrics = read_json(RESULTS_DIR / "model_validation_metrics.json")
+    test_metrics = read_json(RESULTS_DIR / "final_test_evaluation.json")
 
     validation_rows = build_validation_rows(validation_metrics)
     test_rows = build_test_rows(test_metrics)
     notebook_sections_html = build_notebook_sections_html()
 
-    participants_html = ''.join(f'<p>{name}</p>' for name in PARTICIPANTS)
+    participants_html = "".join(f"<p>{name}</p>" for name in PARTICIPANTS)
 
     html = f"""
 <!DOCTYPE html>
@@ -536,15 +543,15 @@ def build_html():
 
 def main():
     html_content = build_html()
-    html_path = REPORTS_DIR / 'relatorio_executivo.html'
-    pdf_path = REPORTS_DIR / 'relatorio_executivo.pdf'
+    html_path = REPORTS_DIR / "relatorio_executivo.html"
+    pdf_path = REPORTS_DIR / "relatorio_executivo.pdf"
 
-    html_path.write_text(html_content, encoding='utf-8')
+    html_path.write_text(html_content, encoding="utf-8")
 
     HTML(string=html_content, base_url=str(REPORTS_DIR)).write_pdf(str(pdf_path))
-    print(f'HTML salvo em: {html_path}')
-    print(f'PDF salvo em: {pdf_path}')
+    print(f"HTML salvo em: {html_path}")
+    print(f"PDF salvo em: {pdf_path}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

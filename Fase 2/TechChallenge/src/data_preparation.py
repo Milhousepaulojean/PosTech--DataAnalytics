@@ -76,7 +76,9 @@ def prepare_modeling_data():
     X_val = preprocessor.transform(val_df[feature_columns])
     X_test = preprocessor.transform(test_df[feature_columns])
 
-    train_prepared = pd.DataFrame(X_train, columns=feature_columns, index=train_df.index)
+    train_prepared = pd.DataFrame(
+        X_train, columns=feature_columns, index=train_df.index
+    )
     train_prepared["target"] = train_df["target"].values
 
     val_prepared = pd.DataFrame(X_val, columns=feature_columns, index=val_df.index)

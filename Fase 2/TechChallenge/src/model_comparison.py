@@ -93,7 +93,9 @@ def main():
         results[name] = metrics
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    with (RESULTS_DIR / "model_validation_metrics.json").open("w", encoding="utf-8") as fp:
+    with (RESULTS_DIR / "model_validation_metrics.json").open(
+        "w", encoding="utf-8"
+    ) as fp:
         json.dump(results, fp, indent=2)
 
     ranking = sorted(
