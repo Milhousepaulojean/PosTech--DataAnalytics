@@ -3,7 +3,6 @@ from pathlib import Path
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "WineQT.csv"
@@ -110,6 +109,6 @@ if __name__ == "__main__":
     print(f"training rows: {len(result['train'])}")
     print(f"validation rows: {len(result['validation'])}")
     print(f"test rows: {len(result['test'])}")
-    print(f"excluded columns: ['Id']")
+    print("excluded columns: ['Id']")
     print(f"feature columns: {len(result['feature_columns'])}")
     print(f"prepared files saved to: {OUTPUT_DIR}")
