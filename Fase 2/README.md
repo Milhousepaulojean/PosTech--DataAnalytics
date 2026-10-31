@@ -45,10 +45,16 @@ Fase 2/
     │   └── figures/
     ├── results/
     │   ├── final_test_evaluation.json
-    │   └── model_validation_metrics.json
+    │   ├── model_validation_metrics.json
+    │   ├── outlier_cv_experiment.json
+    │   ├── threshold_cv_experiment.json
+    │   └── threshold_test_evaluation.json
     └── src/
         ├── data_preparation.py
-        └── model_comparison.py
+        ├── model_comparison.py
+        ├── outlier_cv_experiment.py
+        ├── threshold_cv_experiment.py
+        └── final_threshold_evaluation.py
 ```
 
 ## Componentes
@@ -75,32 +81,81 @@ Os notebooks documentam a exploração e os experimentos:
 
 `TechChallenge/src/model_comparison.py` carrega os dados preparados, treina e compara modelos, calcula métricas (acurácia, precisão, recall, F1, ROC-AUC e PR-AUC) e salva os resultados em JSON na pasta `results/`.
 
+`TechChallenge/src/outlier_cv_experiment.py` compara estratégias de tratamento de outliers com validação cruzada estratificada.
+
+`TechChallenge/src/threshold_cv_experiment.py` calibra o limiar de decisão da classe positiva com probabilidades out-of-fold em validação cruzada.
+
+`TechChallenge/src/final_threshold_evaluation.py` aplica os limiares candidatos no teste reservado para fechar a recomendação operacional final.
+
 ### Resultados e relatório
 
 - `TechChallenge/results/model_validation_metrics.json`: métricas dos modelos na validação.
 - `TechChallenge/results/final_test_evaluation.json`: avaliação final no conjunto de teste.
+- `TechChallenge/results/outlier_cv_experiment.json`: comparação de estratégias de outliers na validação cruzada.
+- `TechChallenge/results/threshold_cv_experiment.json`: comparação de limiares na validação cruzada.
+- `TechChallenge/results/threshold_test_evaluation.json`: impacto dos limiares no teste reservado.
 - `TechChallenge/reports/relatorio_executivo.py`: script de geração do relatório.
 - `TechChallenge/reports/relatorio_executivo.html`: relatório executivo exportado.
 - `TechChallenge/reports/figures/`: imagens e gráficos da análise.
 
 ## Como executar
 
-No terminal, a partir da pasta `Fase 2/`, crie e ative um ambiente virtual (opcional, mas recomendado), instale as dependências e execute os scripts:
+No terminal, a partir da pasta `Fase 2/`, crie e ative um ambiente virtual (opcional, mas recomendado), instale as dependências e execute as etapas abaixo.
+
+### 1) Ambiente e dependências
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 python -m pip install -r TechChallenge/requirements.txt
+```
+
+### 2) Preparação de dados e comparação base de modelos
+
+```bash
 python TechChallenge/src/data_preparation.py
 python TechChallenge/src/model_comparison.py
 ```
 
-Os comandos acima assumem que os scripts aceitam execução direta e encontram os dados usando caminhos relativos ao projeto. Se necessário, execute-os a partir de `TechChallenge/` ou consulte as configurações de caminho nos próprios scripts.
+### 3) Etapa 2: validação experimental de outliers
+
+```bash
+python TechChallenge/src/outlier_cv_experiment.py
+```
+
+### 4) Etapa 3: calibração de limiar por validação cruzada
+
+```bash
+python TechChallenge/src/threshold_cv_experiment.py
+```
+
+### 5) Reavaliação no teste reservado com limiares candidatos
+
+```bash
+python TechChallenge/src/final_threshold_evaluation.py
+```
+
+### 6) Geração do relatório executivo (HTML e PDF)
+
+```bash
+python TechChallenge/reports/relatorio_executivo.py
+```
+
+Os scripts usam a regra de alvo `quality >= 7` e preservam o teste reservado para a avaliação final.
+
+## Ordem recomendada de leitura dos resultados
+
+1. `TechChallenge/results/model_validation_metrics.json`.
+2. `TechChallenge/results/outlier_cv_experiment.json`.
+3. `TechChallenge/results/threshold_cv_experiment.json`.
+4. `TechChallenge/results/threshold_test_evaluation.json`.
+5. `TechChallenge/reports/relatorio_executivo.html` ou `TechChallenge/reports/relatorio_executivo.pdf`.
 
 ## Observações
 
 - O problema é tratado como classificação binária; a classe positiva representa vinhos com `quality >= 7`.
-- Como as classes podem estar desbalanceadas, avalie também precisão, recall, F1 e ROC-AUC, sem depender apenas da acurácia.
+- Como as classes estão desbalanceadas, avalie também precisão, recall, F1, ROC-AUC e Average Precision, sem depender apenas da acurácia.
+- A calibração de limiar altera o equilíbrio entre recall e precision: limiar menor tende a aumentar recall e reduzir precision.
 
 ## Conclusão
 

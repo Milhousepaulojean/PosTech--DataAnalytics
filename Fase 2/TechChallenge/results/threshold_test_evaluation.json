@@ -1,0 +1,40 @@
+{
+  "config": {
+    "target_definition": "quality >= 7",
+    "split": "train 70%, validation 15%, test 15% (estratificado)",
+    "model": "RandomForestClassifier(class_weight='balanced_subsample', n_estimators=500, min_samples_leaf=3)",
+    "threshold_source": "Etapa 3 de validacao cruzada",
+    "thresholds_tested": [
+      0.5,
+      0.46,
+      0.42
+    ]
+  },
+  "probability_metrics": {
+    "roc_auc": 0.7835022522522523,
+    "average_precision": 0.44528642668141705
+  },
+  "threshold_metrics": {
+    "t_0_5": {
+      "threshold": 0.5,
+      "accuracy": 0.8430232558139535,
+      "precision": 0.42857142857142855,
+      "recall": 0.375,
+      "f1": 0.4
+    },
+    "t_0_46": {
+      "threshold": 0.46,
+      "accuracy": 0.8372093023255814,
+      "precision": 0.4166666666666667,
+      "recall": 0.4166666666666667,
+      "f1": 0.4166666666666667
+    },
+    "t_0_42": {
+      "threshold": 0.42,
+      "accuracy": 0.8255813953488372,
+      "precision": 0.38461538461538464,
+      "recall": 0.4166666666666667,
+      "f1": 0.4
+    }
+  }
+}

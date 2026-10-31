@@ -50,6 +50,7 @@ NOTEBOOK_VISUAL_EXPLANATIONS = {
         "A separação do teor alcoólico por classe reforça o poder discriminativo da variável e a plausibilidade do problema de classificação.",
         "Os gráficos indicam sinais claros de diferença entre classes, mas também deixam evidente que o problema não é simples de uma variável isolada.",
         "Esse diagnóstico sustentou a continuidade da modelagem com técnicas mais flexíveis do que a regressão linear simples.",
+      "A avaliação de boxplots e da regra de IQR evidencia caudas e possíveis outliers em variáveis físico-químicas, reforçando a necessidade de modelos e transformações robustas.",
     ],
     "02_modelo_e_validacao.ipynb": [
         "A divisão estratificada entre treino e validação preserva a proporção da classe alvo e reduz risco de vazamento de informação.",
@@ -177,12 +178,51 @@ def build_test_rows(metrics):
     return rows
 
 
+def build_threshold_rows(metrics):
+    baseline = metrics["baseline_threshold_0_50"]
+    best_f1 = metrics["best_threshold_by_f1"]
+    tradeoff = metrics.get("high_recall_tradeoff")
+
+    rows = [
+        [
+            "Baseline t=0.50",
+            fmt_metric(baseline["threshold"]),
+            fmt_metric(baseline["f1"]),
+            fmt_metric(baseline["recall"]),
+            fmt_metric(baseline["precision"]),
+        ],
+        [
+            "Melhor F1",
+            fmt_metric(best_f1["threshold"]),
+            fmt_metric(best_f1["f1"]),
+            fmt_metric(best_f1["recall"]),
+            fmt_metric(best_f1["precision"]),
+        ],
+    ]
+
+    if tradeoff is not None:
+        rows.append(
+            [
+                "Trade-off de recall",
+                fmt_metric(tradeoff["threshold"]),
+                fmt_metric(tradeoff["f1"]),
+                fmt_metric(tradeoff["recall"]),
+                fmt_metric(tradeoff["precision"]),
+            ]
+        )
+
+    return rows
+
+
 def build_html():
     validation_metrics = read_json(RESULTS_DIR / "model_validation_metrics.json")
     test_metrics = read_json(RESULTS_DIR / "final_test_evaluation.json")
+    threshold_metrics = read_json(RESULTS_DIR / "threshold_cv_experiment.json")
+    threshold_test_metrics = read_json(RESULTS_DIR / "threshold_test_evaluation.json")
 
     validation_rows = build_validation_rows(validation_metrics)
     test_rows = build_test_rows(test_metrics)
+    threshold_rows = build_threshold_rows(threshold_metrics)
     notebook_sections_html = build_notebook_sections_html()
 
     participants_html = "".join(f"<p>{name}</p>" for name in PARTICIPANTS)
@@ -417,23 +457,22 @@ def build_html():
   <h2 id="resumo-executivo">1. Resumo executivo</h2>
   <div class="resumo-box">
     <p>
-      Este projeto avaliou a classificação binária da qualidade de vinhos com base em atributos físico-químicos.
-      A regra adotada foi <strong>quality &ge; 7</strong> para a classe positiva e <strong>quality &lt; 7</strong>
-      para a classe negativa. Como a classe relevante é minoritária, a acurácia isolada não é critério suficiente para a decisão.
+      Este projeto classificou vinhos em alta qualidade e baixa/média qualidade com base em variáveis físico-químicas.
+      A regra usada foi <strong>quality &ge; 7</strong> para classe positiva e <strong>quality &lt; 7</strong> para classe negativa.
+      Como a classe positiva é minoritária, a decisão não foi baseada apenas em acurácia.
     </p>
     <p>
-      A recomendação principal do projeto é o <strong>Random Forest com balanceamento de classes</strong>.
-      A decisão final foi orientada pelo conjunto de teste reservado e pela métrica de equilíbrio da classe positiva.
-      O critério principal foi <strong>F1, recall, precision e ROC-AUC</strong>, e não apenas a acurácia bruta.
-      O <strong>HistGradientBoosting</strong> permanece como alternativa forte quando a organização prioriza precision,
-      mas o Random Forest mostrou melhor equilíbrio geral no conjunto final.
+      O modelo recomendado é o <strong>Random Forest com balanceamento de classes</strong>.
+      Depois do ajuste de limiar, o melhor equilíbrio no teste reservado ficou em <strong>threshold 0.46</strong>,
+      com ganho de F1 e recall da classe positiva em relação ao threshold padrão de 0.50.
+      O critério técnico principal foi <strong>F1, recall, precision, ROC-AUC e Average Precision</strong>.
     </p>
   </div>
 
   <div class="kpis">
-    <div class="kpi"><strong>0.6667</strong>F1 no HistGradientBoosting em validação</div>
-    <div class="kpi"><strong>0.6563</strong>F1 do Random Forest em validação</div>
-    <div class="kpi"><strong>0.6462</strong>F1 do Random Forest no teste final</div>
+    <div class="kpi"><strong>0.6647</strong>F1 do Random Forest com limiar 0.46 (CV)</div>
+    <div class="kpi"><strong>0.4167</strong>F1 do Random Forest com limiar 0.46 (teste)</div>
+    <div class="kpi"><strong>0.4167</strong>Recall do Random Forest com limiar 0.46 (teste)</div>
   </div>
 
   <h2 id="objetivos">2. Objetivos</h2>
@@ -455,17 +494,26 @@ def build_html():
   <h2 id="metodologia-notebooks">3. Metodologia e evidência dos notebooks</h2>
   <h3>Objetivo da análise</h3>
   <p>
-    A sequência analítica foi organizada para validar a definição da classe alvo, testar a separação entre treino e teste, comparar modelos e confirmar a decisão final com base em evidência. O problema é desbalanceado e exige atenção especial à classe positiva.
+    A sequência analítica foi organizada para: validar a classe alvo, comparar modelos de forma justa e decidir com evidência de validação.
+    Como o problema é desbalanceado, o foco foi a classe positiva.
   </p>
 
   <h3>Evidência dos notebooks</h3>
   <p>
-    A análise exploratória confirmou que a classe de alta qualidade é minoritária, com cerca de 13,9% dos casos. Isso torna F1, recall e ROC-AUC mais relevantes do que acurácia isolada. A variável álcool mostrou diferença clara entre classes, e a correlação entre atributos reforçou que a qualidade depende de combinações de sinais físico-químicos, não de um único preditor isolado.
+    A análise exploratória mostrou que a classe de alta qualidade é minoritária (cerca de 13,9%).
+    Por isso, F1, recall e ROC-AUC foram mais importantes do que acurácia isolada.
+    A variável álcool mostrou diferença entre classes, e a correlação indicou que a qualidade depende da combinação de variáveis.
+  </p>
+  <p>
+    A etapa de outliers, com boxplots e critério de IQR, mostrou valores extremos em sulfur dioxide, chlorides e residual sugar.
+    Esses pontos não foram removidos automaticamente no EDA para evitar perda de sinal da classe positiva.
   </p>
 
   <h3>Decisão metodológica</h3>
   <p>
-    O conjunto de testes e diagnósticos mostrou que a regressão linear não é a solução principal, a divisão estratificada entre treino e teste foi adequada e a validação cruzada reforçou a estabilidade do modelo. A árvore de decisão foi útil para explicabilidade, mas não superou a melhor performance global dos modelos de ensemble.
+    Os testes mostraram que regressão linear não era a melhor abordagem para este problema.
+    A divisão estratificada e a validação cruzada deram estabilidade para a decisão.
+    A árvore de decisão ajudou na explicabilidade, mas os ensembles tiveram melhor performance.
   </p>
 
   <div class="note">
@@ -502,6 +550,32 @@ def build_html():
     <li>o <strong>baseline majoritário</strong> não é competitivo e serve apenas como referência.</li>
   </ul>
 
+  <h3>Ajuste de limiar (Etapa 3)</h3>
+  <p>
+    Após escolher o modelo baseline, foi feito ajuste de limiar usando apenas validação cruzada estratificada.
+    O objetivo foi deixar claro o trade-off entre recall e precision da classe positiva.
+  </p>
+
+  {build_table(threshold_rows, ['Cenário', 'Limiar', 'F1', 'Recall', 'Precision'])}
+
+  <p>
+    A recomendação operacional padrão é <strong>limiar 0.46</strong>, por melhor F1 médio na validação.
+    Se a prioridade for aumentar sensibilidade da classe positiva, o cenário em <strong>0.42</strong> aumenta recall,
+    com queda de precision.
+  </p>
+
+  <h3>Checagem final no teste reservado</h3>
+  <p>
+    A comparação final confirmou que, para o Random Forest, o limiar 0.46 melhorou F1 e recall em relação ao limiar 0.50,
+    com pequena queda de acurácia.
+  </p>
+
+  {build_table([
+    ['t=0.50', fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_5']['accuracy']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_5']['precision']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_5']['recall']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_5']['f1'])],
+    ['t=0.46', fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_46']['accuracy']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_46']['precision']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_46']['recall']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_46']['f1'])],
+    ['t=0.42', fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_42']['accuracy']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_42']['precision']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_42']['recall']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_42']['f1'])],
+  ], ['Limiar', 'Acurácia', 'Precision', 'Recall', 'F1'])}
+
   <h2 id="avaliacao-teste">6. Avaliação final no teste reservado</h2>
   <figure>
     <img src="figures/final_model_comparison.png" alt="Comparação final no conjunto de teste" />
@@ -509,26 +583,30 @@ def build_html():
   </figure>
 
   <p>
-    O conjunto de teste reservado foi a etapa decisiva para a recomendação principal. O Random Forest balanceado manteve melhor equilíbrio entre detecção da classe positiva e estabilidade geral, enquanto o HistGradientBoosting continuou forte em precision. A diferença principal está no trade-off entre recall e precision: o Random Forest respondeu melhor ao problema em termos de equilíbrio geral e foi escolhido como modelo principal.
+    O conjunto de teste reservado foi a etapa decisiva. O Random Forest balanceado ficou como principal por manter melhor equilíbrio entre F1 e recall da classe positiva.
+    O HistGradientBoosting manteve boa precision, mas com recall menor.
   </p>
 
   {build_table(test_rows, ['Modelo', 'Acurácia', 'Precision', 'Recall', 'F1', 'ROC-AUC', 'Average Precision'])}
 
   <p>
-    Em termos práticos, o <strong>Random Forest</strong> mostrou melhor equilíbrio entre os indicadores relevantes para um problema desbalanceado. Já o <strong>HistGradientBoosting</strong> permaneceu como alternativa sólida quando a organização prioriza precisão e aceita uma queda no recall.
+    Em termos práticos, o <strong>Random Forest</strong> teve melhor equilíbrio para este problema desbalanceado.
+    O <strong>HistGradientBoosting</strong> segue como alternativa quando a prioridade for precision.
   </p>
 
   <h2 id="conclusao-final">7. Conclusão final</h2>
   <p>A recomendação final do projeto é:</p>
   <ul>
-    <li><strong>Random Forest balanced</strong> como modelo principal para a solução de negócio;</li>
+    <li><strong>Random Forest balanced</strong> como modelo principal;</li>
+    <li><strong>limiar 0.46</strong> como configuração padrão de classificação;</li>
+    <li><strong>limiar 0.42</strong> como alternativa quando a meta for maior recall;</li>
     <li><strong>HistGradientBoosting</strong> como alternativa preferencial quando a organização prioriza precision;</li>
     <li><strong>regressão linear</strong> e <strong>clusterização</strong> como diagnósticos e ferramentas complementares, mas não como solução principal;</li>
     <li><strong>árvore de decisão</strong> como apoio interpretativo, não como substituta da melhor performance global.</li>
   </ul>
   <p>
-    Em síntese, a decisão foi guiada por evidência de validação e pelo conjunto de teste protegido, e não por suposição.
-    O melhor equilíbrio entre identificação da classe positiva e robustez geral saiu para o Random Forest balanceado no teste final.
+    Em síntese, a decisão foi guiada por evidência de validação e teste reservado.
+    O projeto fecha com modelo definido e política de limiar clara para diferentes objetivos de negócio.
   </p>
 
   <div class="footer">
