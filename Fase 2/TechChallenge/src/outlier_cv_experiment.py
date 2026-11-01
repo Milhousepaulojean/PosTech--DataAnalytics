@@ -8,6 +8,7 @@ import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import f1_score, make_scorer, precision_score, recall_score
 from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -134,7 +135,13 @@ def main():
     X, y, features = load_data()
 
     splitter = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
-    scoring = ["f1", "recall", "precision", "roc_auc", "average_precision"]
+    scoring = {
+        "f1": make_scorer(f1_score, zero_division=0),
+        "recall": make_scorer(recall_score, zero_division=0),
+        "precision": make_scorer(precision_score, zero_division=0),
+        "roc_auc": "roc_auc",
+        "average_precision": "average_precision",
+    }
 
     strategies = {
         "baseline_sem_tratamento": None,
