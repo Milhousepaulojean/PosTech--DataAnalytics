@@ -45,11 +45,12 @@ def build_table(rows, headers):
 
 NOTEBOOK_VISUAL_EXPLANATIONS = {
     "01_eda.ipynb": [
-        "A distribuição da classe alvo mostra que a classe positiva é minoritária e exige avaliação por métricas orientadas à classe relevante.",
-        "A correlação entre variáveis sugere que a qualidade depende de combinações de atributos, não de um único fator isolado.",
-        "A separação do teor alcoólico por classe reforça o poder discriminativo da variável e a plausibilidade do problema de classificação.",
-        "Os gráficos indicam sinais claros de diferença entre classes, mas também deixam evidente que o problema não é simples de uma variável isolada.",
-        "Esse diagnóstico sustentou a continuidade da modelagem com técnicas mais flexíveis do que a regressão linear simples.",
+        "A história começa com um ponto central: a classe positiva é minoritária, então o problema exige foco em métricas de equilíbrio e sensibilidade, e não apenas acurácia.",
+        "Em seguida, a distribuição da qualidade mostra como as classes se organizam no conjunto e justifica por que a fronteira de decisão não é trivial.",
+        "A proporção entre classes reforça o contexto de desbalanceamento observado na etapa inicial.",
+        "A matriz de correlação mostra que a qualidade não responde a um único fator isolado, mas à combinação entre variáveis físico-químicas.",
+        "A separação do teor alcoólico por classe fortalece a leitura de que algumas variáveis carregam sinal preditivo relevante.",
+        "Por fim, os boxplots com IQR revelam caudas e extremos importantes, orientando a etapa de validação de outliers sem alterar prematuramente o conjunto.",
     ],
     "02_modelo_e_validacao.ipynb": [
         "A divisão estratificada entre treino e validação preserva a proporção da classe alvo e reduz risco de vazamento de informação.",
@@ -81,7 +82,12 @@ NOTEBOOK_VISUAL_EXPLANATIONS = {
 }
 
 
-def build_notebook_section(nb_name: str, title: str):
+def build_notebook_section(
+    nb_name: str,
+    title: str,
+    show_section_title: bool = True,
+    force_break_before: bool = True,
+):
     nb_path = ROOT_DIR / "notebooks" / nb_name
     with nb_path.open("r", encoding="utf-8") as fh:
         notebook = json.load(fh)
@@ -98,36 +104,86 @@ def build_notebook_section(nb_name: str, title: str):
             images.append(image_b64)
 
     explanations = NOTEBOOK_VISUAL_EXPLANATIONS.get(nb_name, [])
-    part_html = [f"<h3>{title}</h3>"]
+    section_classes = ["notebook-section"]
+    if force_break_before and nb_name == "03_regressao_linear.ipynb":
+        section_classes.append("notebook-break-before")
+
+    part_html = [f"<section class=\"{' '.join(section_classes)}\">"]
+    if show_section_title:
+        part_html.append(f"<h3>{title}</h3>")
+
     for index, image_b64 in enumerate(images, start=1):
         explanation = (
             explanations[index - 1]
             if index - 1 < len(explanations)
             else "Este gráfico reforça a conclusão analítica do notebook e sustenta a interpretação do modelo."
         )
+
+        graph_classes = ["graph-block"]
+        if nb_name == "01_eda.ipynb" and index in {1, 2, 3, 4}:
+            graph_classes.append("graph-compact")
+        if nb_name == "01_eda.ipynb" and index == 6:
+            graph_classes.append("graph-outlier-large")
+        if nb_name == "02_modelo_e_validacao.ipynb" and index in {3, 4, 5, 6}:
+            graph_classes.append("graph-compact")
+        if nb_name in {"05_validacao_cruzada.ipynb", "06_clusterizacao.ipynb"}:
+            graph_classes.append("graph-compact")
+
+        if (nb_name == "01_eda.ipynb" and index in {1, 3}) or (
+            nb_name == "02_modelo_e_validacao.ipynb" and index in {1, 3, 5}
+        ):
+            part_html.append('<div class="graph-pair">')
+
         part_html.append(f"""
-            <figure>
-              <img src="data:image/png;base64,{image_b64}" alt="{title} - gráfico {index}" />
-              <figcaption>{title} — Gráfico {index}</figcaption>
-            </figure>
-            <p class="img-explain">{explanation}</p>
+            <div class="{' '.join(graph_classes)}">
+              <figure>
+                <img src="data:image/png;base64,{image_b64}" alt="{title} - gráfico {index}" />
+                <figcaption>{title} — Gráfico {index}</figcaption>
+              </figure>
+              <p class="img-explain">{explanation}</p>
+            </div>
             """)
+
+        if (nb_name == "01_eda.ipynb" and index in {2, 4}) or (
+            nb_name == "02_modelo_e_validacao.ipynb" and index in {2, 4, 6}
+        ):
+            part_html.append("</div>")
+
+    part_html.append("</section>")
     return "".join(part_html)
 
 
-def build_notebook_sections_html():
-    notebook_order = [
-        ("01_eda.ipynb", "Análise exploratória e entendimento do problema"),
-        ("02_modelo_e_validacao.ipynb", "Modelagem, comparação e decisão final"),
-        ("03_regressao_linear.ipynb", "Regressão Linear"),
-        ("04_train_test_split.ipynb", "Train/Test Split"),
-        ("05_validacao_cruzada.ipynb", "Validação Cruzada"),
-        ("06_clusterizacao.ipynb", "Clusterização"),
-        ("07_arvore_decisao_pm.ipynb", "Árvore de decisão"),
-    ]
-    return "".join(
-        build_notebook_section(nb_name, title) for nb_name, title in notebook_order
-    )
+def build_notebook_sections_html(
+    notebook_order=None,
+    show_section_titles: bool = True,
+    force_break_before: bool = True,
+):
+    if notebook_order is None:
+        notebook_order = [
+            ("01_eda.ipynb", "Análise exploratória e entendimento do problema"),
+            ("02_modelo_e_validacao.ipynb", "Modelagem, comparação e decisão final"),
+            ("03_regressao_linear.ipynb", "Regressão Linear"),
+            ("04_train_test_split.ipynb", "Train/Test Split"),
+            ("05_validacao_cruzada.ipynb", "Validação Cruzada"),
+            ("06_clusterizacao.ipynb", "Clusterização"),
+            ("07_arvore_decisao_pm.ipynb", "Árvore de decisão"),
+        ]
+
+    parts = []
+    for nb_name, title in notebook_order:
+        if nb_name == "05_validacao_cruzada.ipynb":
+            parts.append('<div class="cv-cluster-group">')
+        parts.append(
+            build_notebook_section(
+                nb_name,
+                title,
+                show_section_title=show_section_titles,
+                force_break_before=force_break_before,
+            )
+        )
+        if nb_name == "06_clusterizacao.ipynb":
+            parts.append("</div>")
+    return "".join(parts)
 
 
 def build_validation_rows(metrics):
@@ -177,13 +233,70 @@ def build_test_rows(metrics):
     return rows
 
 
+def build_threshold_rows(metrics):
+    baseline = metrics["baseline_threshold_0_50"]
+    best_f1 = metrics["best_threshold_by_f1"]
+    tradeoff = metrics.get("high_recall_tradeoff")
+
+    rows = [
+        [
+            "Baseline t=0.50",
+            fmt_metric(baseline["threshold"]),
+            fmt_metric(baseline["f1"]),
+            fmt_metric(baseline["recall"]),
+            fmt_metric(baseline["precision"]),
+        ],
+        [
+            "Melhor F1",
+            fmt_metric(best_f1["threshold"]),
+            fmt_metric(best_f1["f1"]),
+            fmt_metric(best_f1["recall"]),
+            fmt_metric(best_f1["precision"]),
+        ],
+    ]
+
+    if tradeoff is not None:
+        rows.append(
+            [
+                "Trade-off de recall",
+                fmt_metric(tradeoff["threshold"]),
+                fmt_metric(tradeoff["f1"]),
+                fmt_metric(tradeoff["recall"]),
+                fmt_metric(tradeoff["precision"]),
+            ]
+        )
+
+    return rows
+
+
 def build_html():
     validation_metrics = read_json(RESULTS_DIR / "model_validation_metrics.json")
     test_metrics = read_json(RESULTS_DIR / "final_test_evaluation.json")
+    threshold_metrics = read_json(RESULTS_DIR / "threshold_cv_experiment.json")
+    threshold_test_metrics = read_json(RESULTS_DIR / "threshold_test_evaluation.json")
 
     validation_rows = build_validation_rows(validation_metrics)
     test_rows = build_test_rows(test_metrics)
-    notebook_sections_html = build_notebook_sections_html()
+    threshold_rows = build_threshold_rows(threshold_metrics)
+    exploratory_sections_html = build_notebook_sections_html(
+        [
+            ("01_eda.ipynb", "Análise exploratória"),
+        ],
+        show_section_titles=False,
+        force_break_before=False,
+    )
+    complementary_sections_html = build_notebook_sections_html(
+        [
+            ("02_modelo_e_validacao.ipynb", "Modelagem, comparação e decisão final"),
+            ("03_regressao_linear.ipynb", "Regressão linear"),
+            ("04_train_test_split.ipynb", "Train/Test Split"),
+            ("05_validacao_cruzada.ipynb", "Validação cruzada"),
+            ("06_clusterizacao.ipynb", "Clusterização"),
+            ("07_arvore_decisao_pm.ipynb", "Árvore de decisão"),
+        ],
+        show_section_titles=False,
+        force_break_before=False,
+    )
 
     participants_html = "".join(f"<p>{name}</p>" for name in PARTICIPANTS)
 
@@ -197,6 +310,16 @@ def build_html():
     @page {{
       size: A4;
       margin: 2.3cm 1.9cm 2.1cm 1.9cm;
+      @top-left {{
+        content: string(chapter-title);
+        font-size: 9pt;
+        color: #666;
+      }}
+      @bottom-right {{
+        content: "Página " counter(page) " de " counter(pages);
+        font-size: 9pt;
+        color: #666;
+      }}
     }}
 
     html {{
@@ -232,6 +355,9 @@ def build_html():
     h2 {{
       font-size: 15pt;
       margin-top: 1.6em;
+      string-set: chapter-title content(text);
+      border-left: 4px solid #444;
+      padding-left: 0.45em;
     }}
 
     h3 {{
@@ -285,15 +411,30 @@ def build_html():
     }}
 
     .sumario ol {{
+      list-style: none;
       margin-top: 0.5em;
-      padding-left: 1.3em;
+      padding-left: 0;
     }}
 
     .sumario li {{
-      margin-bottom: 0.25em;
-      display: flex;
-      justify-content: space-between;
-      gap: 1em;
+      margin-bottom: 0.35em;
+    }}
+
+    .sumario a {{
+      color: #111;
+      text-decoration: none;
+      display: block;
+      font-size: 11pt;
+    }}
+
+    .sumario a::after {{
+      content: leader('.') target-counter(attr(href), page);
+    }}
+
+    .sumario .toc-sub {{
+      padding-left: 1.1em;
+      font-size: 10.5pt;
+      color: #333;
     }}
 
     .resumo-box {{
@@ -351,9 +492,51 @@ def build_html():
     figure img {{
       max-width: 100%;
       height: auto;
+      max-height: 12.8cm;
       border: 1px solid #ddd;
       display: block;
       margin: 0 auto;
+    }}
+
+    .graph-block {{
+      page-break-inside: avoid;
+      break-inside: avoid;
+      margin: 0 0 0.85em 0;
+    }}
+
+    .graph-compact figure img {{
+      max-height: 8.2cm;
+    }}
+
+    .graph-outlier-large figure img {{
+      max-height: 22cm;
+      width: 100%;
+      object-fit: contain;
+    }}
+
+    .graph-pair {{
+      display: block;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }}
+
+    .graph-pair .graph-block + .graph-block {{
+      margin-top: 0.4em;
+    }}
+
+    .notebook-section {{
+      page-break-inside: auto;
+      break-inside: auto;
+    }}
+
+    .notebook-break-before {{
+      page-break-before: always;
+      break-before: page;
+    }}
+
+    .cv-cluster-group {{
+      page-break-inside: avoid;
+      break-inside: avoid;
     }}
 
     figcaption {{
@@ -376,10 +559,26 @@ def build_html():
 
     .img-explain {{
       margin-top: -0.5em;
-      margin-bottom: 1.4em;
+      margin-bottom: 0.55em;
       font-size: 10.5pt;
       line-height: 1.5;
       text-align: justify;
+    }}
+
+    .compact-lead {{
+      margin-top: 0.3em;
+      margin-bottom: 0.45em;
+    }}
+
+    .complementary-flow .notebook-section {{
+      margin-top: 0.2em;
+    }}
+
+    .story-intro {{
+      background: #f7f7f7;
+      border-left: 4px solid #444;
+      padding: 0.75em 0.95em;
+      margin: 0.8em 0 1em 0;
     }}
 
     .footer {{
@@ -387,6 +586,10 @@ def build_html():
       font-size: 10pt;
       text-align: center;
       color: #444;
+    }}
+
+    .section-break {{
+      page-break-before: always;
     }}
   </style>
 </head>
@@ -404,36 +607,38 @@ def build_html():
   <section class="sumario">
     <h2 id="sumario">Sumário</h2>
     <ol>
-      <li>Resumo executivo</li>
-      <li>Objetivos</li>
-      <li>Metodologia e evidência dos notebooks</li>
-      <li>Diagnóstico exploratório</li>
-      <li>Resultados de validação</li>
-      <li>Avaliação final no teste reservado</li>
-      <li>Conclusão final</li>
+      <li><a href="#resumo-executivo">1. Resumo executivo</a></li>
+      <li><a href="#objetivos">2. Objetivos</a></li>
+      <li><a href="#metodologia-notebooks">3. Metodologia e evidência dos notebooks</a></li>
+      <li><a href="#diagnostico-exploratorio">4. Diagnóstico exploratório</a></li>
+      <li class="toc-sub"><a href="#analise-exploratoria-sub">4.1 Análise exploratória</a></li>
+      <li class="toc-sub"><a href="#evidencias-complementares-sub">4.2 Evidências complementares</a></li>
+      <li><a href="#resultados-validacao">5. Resultados de validação</a></li>
+      <li class="toc-sub"><a href="#ajuste-limiar">5.1 Ajuste de limiar</a></li>
+      <li class="toc-sub"><a href="#checagem-teste-limiar">5.2 Checagem final no teste reservado</a></li>
+      <li><a href="#avaliacao-teste">6. Avaliação final no teste reservado</a></li>
+      <li><a href="#conclusao-final">7. Conclusão final</a></li>
     </ol>
   </section>
 
   <h2 id="resumo-executivo">1. Resumo executivo</h2>
   <div class="resumo-box">
     <p>
-      Este projeto avaliou a classificação binária da qualidade de vinhos com base em atributos físico-químicos.
-      A regra adotada foi <strong>quality &ge; 7</strong> para a classe positiva e <strong>quality &lt; 7</strong>
-      para a classe negativa. Como a classe relevante é minoritária, a acurácia isolada não é critério suficiente para a decisão.
+      O projeto partiu de uma pergunta objetiva: como identificar, de forma confiável, vinhos de alta qualidade usando apenas atributos físico-químicos.
+      A regra de negócio foi mantida do início ao fim: <strong>quality &ge; 7</strong> como classe positiva e <strong>quality &lt; 7</strong> como classe negativa.
+      Como a classe positiva é minoritária, a análise foi conduzida com foco em equilíbrio entre sensibilidade e precisão da classe relevante.
     </p>
     <p>
-      A recomendação principal do projeto é o <strong>Random Forest com balanceamento de classes</strong>.
-      A decisão final foi orientada pelo conjunto de teste reservado e pela métrica de equilíbrio da classe positiva.
-      O critério principal foi <strong>F1, recall, precision e ROC-AUC</strong>, e não apenas a acurácia bruta.
-      O <strong>HistGradientBoosting</strong> permanece como alternativa forte quando a organização prioriza precision,
-      mas o Random Forest mostrou melhor equilíbrio geral no conjunto final.
+      Na trilha de decisão, comparamos modelos, validamos alternativas para outliers e calibramos limiar sem usar o teste final na escolha.
+      O desfecho foi a recomendação de <strong>Random Forest com balanceamento de classes</strong> e limiar operacional de <strong>0.46</strong>,
+      sustentado por <strong>F1, recall, precision, ROC-AUC e Average Precision</strong>.
     </p>
   </div>
 
   <div class="kpis">
-    <div class="kpi"><strong>0.6667</strong>F1 no HistGradientBoosting em validação</div>
-    <div class="kpi"><strong>0.6563</strong>F1 do Random Forest em validação</div>
-    <div class="kpi"><strong>0.6462</strong>F1 do Random Forest no teste final</div>
+    <div class="kpi"><strong>0.6647</strong>F1 do Random Forest com limiar 0.46 (CV)</div>
+    <div class="kpi"><strong>0.4167</strong>F1 do Random Forest com limiar 0.46 (teste)</div>
+    <div class="kpi"><strong>0.4167</strong>Recall do Random Forest com limiar 0.46 (teste)</div>
   </div>
 
   <h2 id="objetivos">2. Objetivos</h2>
@@ -455,17 +660,26 @@ def build_html():
   <h2 id="metodologia-notebooks">3. Metodologia e evidência dos notebooks</h2>
   <h3>Objetivo da análise</h3>
   <p>
-    A sequência analítica foi organizada para validar a definição da classe alvo, testar a separação entre treino e teste, comparar modelos e confirmar a decisão final com base em evidência. O problema é desbalanceado e exige atenção especial à classe positiva.
+    A trilha metodológica foi montada como uma sequência de decisão: entender o dado, testar alternativas em ambiente controlado e validar a decisão final em conjunto reservado.
+    Como o problema é desbalanceado, o foco permaneceu na classe positiva durante todas as comparações.
   </p>
 
   <h3>Evidência dos notebooks</h3>
   <p>
-    A análise exploratória confirmou que a classe de alta qualidade é minoritária, com cerca de 13,9% dos casos. Isso torna F1, recall e ROC-AUC mais relevantes do que acurácia isolada. A variável álcool mostrou diferença clara entre classes, e a correlação entre atributos reforçou que a qualidade depende de combinações de sinais físico-químicos, não de um único preditor isolado.
+    A análise exploratória mostrou que a classe de alta qualidade representa cerca de 13,9% do conjunto.
+    Esse ponto definiu a régua analítica: F1, recall e ROC-AUC ganharam prioridade sobre acurácia isolada.
+    Também foi observado que álcool e correlações multivariadas oferecem sinal útil para distinguir as classes.
+  </p>
+  <p>
+    Na etapa de outliers, boxplots e critério de IQR destacaram extremos em sulfur dioxide, chlorides e residual sugar.
+    A decisão foi não remover pontos de forma automática no EDA, preservando sinal potencial da classe positiva para avaliação experimental posterior.
   </p>
 
   <h3>Decisão metodológica</h3>
   <p>
-    O conjunto de testes e diagnósticos mostrou que a regressão linear não é a solução principal, a divisão estratificada entre treino e teste foi adequada e a validação cruzada reforçou a estabilidade do modelo. A árvore de decisão foi útil para explicabilidade, mas não superou a melhor performance global dos modelos de ensemble.
+    Os testes mostraram que regressão linear funciona como referência, mas não captura a complexidade do problema.
+    A divisão estratificada e a validação cruzada trouxeram estabilidade para a comparação.
+    A árvore de decisão contribuiu para explicabilidade, enquanto os ensembles sustentaram melhor desempenho preditivo.
   </p>
 
   <div class="note">
@@ -481,12 +695,23 @@ def build_html():
   </ul>
 
   <h2 id="diagnostico-exploratorio">4. Diagnóstico exploratório</h2>
-  <p>
-    O conjunto de gráficos reforça que a decisão final foi tomada a partir de evidência analítica e não por hipótese. Abaixo, cada figura acompanha a interpretação direta do que foi observado e a relevância para a escolha do modelo.
-  </p>
-  {notebook_sections_html}
+  <div class="story-intro">
+    A leitura exploratória abre a narrativa do projeto: primeiro entendemos a distribuição da classe e da qualidade, depois avaliamos relações entre variáveis e, por fim, diagnosticamos outliers. Isso prepara o terreno para a modelagem com critérios claros de decisão.
+  </div>
 
-  <h2 id="resultados-validacao">5. Resultados de validação</h2>
+  <h3 id="analise-exploratoria-sub">4.1 Análise exploratória</h3>
+  <p>
+    Esta seção apresenta os sinais iniciais do problema: distribuição da classe alvo, distribuição da qualidade, relações entre variáveis e diagnóstico de outliers. O objetivo é contextualizar por que as etapas seguintes priorizam métricas de equilíbrio da classe positiva.
+  </p>
+  {exploratory_sections_html}
+
+  <h3 id="evidencias-complementares-sub">4.2 Evidências complementares da trilha analítica</h3>
+  <p class="compact-lead">
+    Com a base exploratória consolidada, a sequência abaixo mostra como cada etapa complementar sustentou a recomendação final, preservando separação entre treino, validação e teste.
+  </p>
+  <div class="complementary-flow">{complementary_sections_html}</div>
+
+  <h2 id="resultados-validacao" class="section-break">5. Resultados de validação</h2>
   <figure>
     <img src="figures/model_f1_comparison.png" alt="Comparação de F1 por modelo" />
     <figcaption>Figura 4 — Comparação de F1 por modelo na validação.</figcaption>
@@ -502,33 +727,63 @@ def build_html():
     <li>o <strong>baseline majoritário</strong> não é competitivo e serve apenas como referência.</li>
   </ul>
 
-  <h2 id="avaliacao-teste">6. Avaliação final no teste reservado</h2>
+  <h3 id="ajuste-limiar" class="section-break">Ajuste de limiar</h3>
+  <p>
+    Após escolher o modelo baseline, foi feito ajuste de limiar usando apenas validação cruzada estratificada.
+    O objetivo foi deixar claro o trade-off entre recall e precision da classe positiva.
+  </p>
+
+  {build_table(threshold_rows, ['Cenário', 'Limiar', 'F1', 'Recall', 'Precision'])}
+
+  <p>
+    A recomendação operacional padrão é <strong>limiar 0.46</strong>, por melhor F1 médio na validação.
+    Se a prioridade for aumentar sensibilidade da classe positiva, o cenário em <strong>0.42</strong> aumenta recall,
+    com queda de precision.
+  </p>
+
+  <h3 id="checagem-teste-limiar">Checagem final no teste reservado</h3>
+  <p>
+    A comparação final confirmou que, para o Random Forest, o limiar 0.46 melhorou F1 e recall em relação ao limiar 0.50,
+    com pequena queda de acurácia.
+  </p>
+
+  {build_table([
+    ['t=0.50', fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_5']['accuracy']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_5']['precision']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_5']['recall']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_5']['f1'])],
+    ['t=0.46', fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_46']['accuracy']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_46']['precision']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_46']['recall']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_46']['f1'])],
+    ['t=0.42', fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_42']['accuracy']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_42']['precision']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_42']['recall']), fmt_metric(threshold_test_metrics['threshold_metrics']['t_0_42']['f1'])],
+  ], ['Limiar', 'Acurácia', 'Precision', 'Recall', 'F1'])}
+
+  <h2 id="avaliacao-teste" class="section-break">6. Avaliação final no teste reservado</h2>
   <figure>
     <img src="figures/final_model_comparison.png" alt="Comparação final no conjunto de teste" />
     <figcaption>Figura 5 — Comparação final no conjunto de teste.</figcaption>
   </figure>
 
   <p>
-    O conjunto de teste reservado foi a etapa decisiva para a recomendação principal. O Random Forest balanceado manteve melhor equilíbrio entre detecção da classe positiva e estabilidade geral, enquanto o HistGradientBoosting continuou forte em precision. A diferença principal está no trade-off entre recall e precision: o Random Forest respondeu melhor ao problema em termos de equilíbrio geral e foi escolhido como modelo principal.
+    O conjunto de teste reservado foi a etapa decisiva. O Random Forest balanceado ficou como principal por manter melhor equilíbrio entre F1 e recall da classe positiva.
+    O HistGradientBoosting manteve boa precision, mas com recall menor.
   </p>
 
   {build_table(test_rows, ['Modelo', 'Acurácia', 'Precision', 'Recall', 'F1', 'ROC-AUC', 'Average Precision'])}
 
   <p>
-    Em termos práticos, o <strong>Random Forest</strong> mostrou melhor equilíbrio entre os indicadores relevantes para um problema desbalanceado. Já o <strong>HistGradientBoosting</strong> permaneceu como alternativa sólida quando a organização prioriza precisão e aceita uma queda no recall.
+    Em termos práticos, o <strong>Random Forest</strong> teve melhor equilíbrio para este problema desbalanceado.
+    O <strong>HistGradientBoosting</strong> segue como alternativa quando a prioridade for precision.
   </p>
 
-  <h2 id="conclusao-final">7. Conclusão final</h2>
+  <h2 id="conclusao-final" class="section-break">7. Conclusão final</h2>
   <p>A recomendação final do projeto é:</p>
   <ul>
-    <li><strong>Random Forest balanced</strong> como modelo principal para a solução de negócio;</li>
+    <li><strong>Random Forest balanced</strong> como modelo principal;</li>
+    <li><strong>limiar 0.46</strong> como configuração padrão de classificação;</li>
+    <li><strong>limiar 0.42</strong> como alternativa quando a meta for maior recall;</li>
     <li><strong>HistGradientBoosting</strong> como alternativa preferencial quando a organização prioriza precision;</li>
     <li><strong>regressão linear</strong> e <strong>clusterização</strong> como diagnósticos e ferramentas complementares, mas não como solução principal;</li>
     <li><strong>árvore de decisão</strong> como apoio interpretativo, não como substituta da melhor performance global.</li>
   </ul>
   <p>
-    Em síntese, a decisão foi guiada por evidência de validação e pelo conjunto de teste protegido, e não por suposição.
-    O melhor equilíbrio entre identificação da classe positiva e robustez geral saiu para o Random Forest balanceado no teste final.
+    Em síntese, a decisão foi guiada por evidência de validação e teste reservado.
+    O projeto fecha com modelo definido e política de limiar clara para diferentes objetivos de negócio.
   </p>
 
   <div class="footer">
