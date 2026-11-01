@@ -30,9 +30,7 @@ def load_data():
     df = pd.read_csv(DATA_PATH)
     df["target"] = (df["quality"] >= TARGET_CUTOFF).astype(int)
 
-    features = [
-        col for col in df.columns if col not in {"Id", "quality", "target"}
-    ]
+    features = [col for col in df.columns if col not in {"Id", "quality", "target"}]
     X = df[features]
     y = df["target"]
     return X, y
@@ -129,14 +127,16 @@ def main():
             "recall": float(best_f1_row["recall"]),
             "precision": float(best_f1_row["precision"]),
         },
-        "high_recall_tradeoff": None
-        if tradeoff_row is None
-        else {
-            "threshold": float(tradeoff_row["threshold"]),
-            "f1": float(tradeoff_row["f1"]),
-            "recall": float(tradeoff_row["recall"]),
-            "precision": float(tradeoff_row["precision"]),
-        },
+        "high_recall_tradeoff": (
+            None
+            if tradeoff_row is None
+            else {
+                "threshold": float(tradeoff_row["threshold"]),
+                "f1": float(tradeoff_row["f1"]),
+                "recall": float(tradeoff_row["recall"]),
+                "precision": float(tradeoff_row["precision"]),
+            }
+        ),
         "threshold_metrics": threshold_df.to_dict(orient="records"),
     }
 
@@ -160,7 +160,9 @@ def main():
     )
 
     if payload["high_recall_tradeoff"] is None:
-        print("Trade-off de recall: nenhum limiar superou recall com queda de F1 <= 0.01")
+        print(
+            "Trade-off de recall: nenhum limiar superou recall com queda de F1 <= 0.01"
+        )
     else:
         print(
             "Trade-off de recall: "

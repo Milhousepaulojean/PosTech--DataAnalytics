@@ -9,14 +9,28 @@ Repositório referente à Fase 2 da pós-graduação em Data Analytics da FIAP/P
 
 ## Objetivo
 
-O projeto utiliza o dataset WineQT para responder a uma pergunta de classificação: **o vinho é de alta qualidade?**
+Este projeto usa o dataset WineQT para responder a uma pergunta de negócio objetiva: **o vinho é de alta qualidade?**
 
 A variável `quality` é convertida em um alvo binário:
 
 - `quality >= 7`: classe 1 (alta qualidade)
 - `quality < 7`: classe 0
 
-O fluxo de análise inclui a exploração dos dados, a preparação das amostras de treino, validação e teste, o preprocessamento, a comparação de modelos e a avaliação final em dados não vistos.
+Como a classe positiva é minoritária, a decisão do projeto foi orientada por métricas de equilíbrio e sensibilidade da classe relevante (F1, recall, precision, ROC-AUC e Average Precision), com avaliação final em teste reservado.
+
+## A história analítica do projeto
+
+O trabalho foi estruturado como uma trilha de decisão em sete movimentos:
+
+1. entender o dado e o desbalanceamento da classe positiva (EDA);
+2. comparar candidatos supervisionados sob a mesma régua de métricas;
+3. usar regressão linear como benchmark de diagnóstico, não como solução final;
+4. confirmar generalização com treino/teste em dados não vistos;
+5. validar estabilidade com validação cruzada;
+6. usar clusterização como leitura complementar de estrutura do dado;
+7. calibrar limiar e fechar recomendação operacional no teste reservado.
+
+Esse encadeamento evita decisões por uma única métrica isolada e preserva rastreabilidade entre hipótese, evidência e conclusão.
 
 ## Estrutura do projeto
 
@@ -65,15 +79,15 @@ Fase 2/
 
 ### Notebooks
 
-Os notebooks documentam a exploração e os experimentos:
+Os notebooks registram a narrativa técnica completa, do diagnóstico à recomendação final:
 
-- `01_eda.ipynb`: análise exploratória dos dados.
-- `02_modelo_e_validacao.ipynb`: comparação e validação de modelos.
-- `03_regressao_linear.ipynb`: benchmark com regressão linear.
-- `04_train_test_split.ipynb`: estudo da divisão entre treino e teste.
-- `05_validacao_cruzada.ipynb`: avaliação por validação cruzada.
-- `06_clusterizacao.ipynb`: análise de clusters.
-- `07_arvore_decisao_pm.ipynb`: árvore de decisão e interpretação do modelo.
+- `01_eda.ipynb`: contexto inicial do dado, desbalanceamento, correlações e diagnóstico de outliers.
+- `02_modelo_e_validacao.ipynb`: comparação de modelos, avaliação de outliers, ajuste de limiar e recomendação final.
+- `03_regressao_linear.ipynb`: benchmark linear para validar limitações de hipótese estritamente linear.
+- `04_train_test_split.ipynb`: verificação de generalização em teste reservado.
+- `05_validacao_cruzada.ipynb`: consistência de desempenho em múltiplas partições.
+- `06_clusterizacao.ipynb`: análise não supervisionada como apoio interpretativo.
+- `07_arvore_decisao_pm.ipynb`: explicabilidade por árvore e comparação com desempenho global.
 
 ### Scripts
 
@@ -143,13 +157,15 @@ python TechChallenge/reports/relatorio_executivo.py
 
 Os scripts usam a regra de alvo `quality >= 7` e preservam o teste reservado para a avaliação final.
 
-## Ordem recomendada de leitura dos resultados
+## Como ler os resultados (sequência recomendada)
 
-1. `TechChallenge/results/model_validation_metrics.json`.
-2. `TechChallenge/results/outlier_cv_experiment.json`.
-3. `TechChallenge/results/threshold_cv_experiment.json`.
-4. `TechChallenge/results/threshold_test_evaluation.json`.
-5. `TechChallenge/reports/relatorio_executivo.html` ou `TechChallenge/reports/relatorio_executivo.pdf`.
+Use esta ordem para acompanhar a história de decisão do projeto:
+
+1. desempenho-base na validação: `TechChallenge/results/model_validation_metrics.json`;
+2. impacto de estratégias de outliers: `TechChallenge/results/outlier_cv_experiment.json`;
+3. efeito da calibração de limiar na validação cruzada: `TechChallenge/results/threshold_cv_experiment.json`;
+4. verificação dos limiares no teste reservado: `TechChallenge/results/threshold_test_evaluation.json`;
+5. consolidação executiva com interpretação integrada: `TechChallenge/reports/relatorio_executivo.html` ou `TechChallenge/reports/relatorio_executivo.pdf`.
 
 ## Observações
 
@@ -159,4 +175,4 @@ Os scripts usam a regra de alvo `quality >= 7` e preservam o teste reservado par
 
 ## Conclusão
 
-Este repositório reúne a análise exploratória, a preparação dos dados, a comparação de modelos e a avaliação final da classificação do WineQT. A organização facilita a leitura, o estudo e a reprodução das etapas do projeto.
+Este repositório organiza, de forma reproduzível, toda a jornada analítica do WineQT: da leitura exploratória até a decisão operacional de modelo e limiar. O resultado final não é apenas um ranking de métricas, mas uma recomendação técnica rastreável, orientada ao problema de classe desbalanceada e validada em teste reservado.

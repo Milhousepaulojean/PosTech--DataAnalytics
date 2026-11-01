@@ -63,9 +63,7 @@ def load_data():
     df = pd.read_csv(DATA_PATH)
     df["target"] = (df["quality"] >= TARGET_CUTOFF).astype(int)
 
-    features = [
-        col for col in df.columns if col not in {"Id", "quality", "target"}
-    ]
+    features = [col for col in df.columns if col not in {"Id", "quality", "target"}]
     X = df[features]
     y = df["target"]
     return X, y, features
