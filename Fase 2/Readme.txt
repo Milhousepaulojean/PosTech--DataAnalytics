@@ -64,7 +64,8 @@ ARQUIVOS PARA APRESENTACAO
 
 
 4) Apresentacao com Slides
-   Caminho: 
+   Caminho: TechChallenge/reports/Classificação de Qualidade de Vinhos(2).pdf ou 
+   Classificação de Qualidade de Vinhos(2).pptx
    Descricao: Apresentacao com Slides
 
 5) video youtube
